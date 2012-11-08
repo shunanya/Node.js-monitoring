@@ -1,0 +1,36 @@
+{
+  "name": "node.js-monitoring",
+  "version": "0.1.8",
+  "description": "Node.js server monitor module",
+  "main": "./node_monitor_plugin/src/monitor",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/shunanya/Node.js-monitoring.git"
+  },
+  "devDependencies": {
+    "log4js": ">0.4.0",
+    "node_hash": "*"
+  },
+  "keywords": [
+    "Node.js",
+    "Monitoring"
+  ],
+  "author": {
+	"name": "Simon Hunanyan",
+	"email": "simon.hunanyan@monitis.com"
+   },
+   "bugs": {
+       "url": "http://github.com/shunanya/Node.js-monitoring/issues"
+   },
+   "engines": [ "node >=0.4" ],
+   "directories": {
+       "log": "./node_monitor_plugin/log",
+       "properties": "./node_monitor_plugin/properties",
+       "src": "./node_monitor_plugin/src"
+
+   },
+   "license": "BSD"
+}
