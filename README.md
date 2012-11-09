@@ -43,11 +43,18 @@ Whole set of measured parameters divided on two parts
     1. The status codes (codes) - the collecting status codes shown in form {1xx: value, 2xx: value, 3xx: value, 4xx: value, 5xx: value}  
     1. The application specific parameters (e.g. client platform, client application version and so on).  
 
+#### Getting as a Node.js module
+You can get the monitor as NPM module by using the following command  
+
+        npm install node-monitor
+
+and next use it as an embedded Node.js module (see below).
+
 #### Customizing and Usage
 ##### The activation of monitor pluging can be done very easily   
 You need to add the following two lines in your code  
 
-        var monitor = require('monitor');// insert monitor module-plugin
+        var monitor = require('node-monitor');// insert monitor module-plugin
         ....
         monitor.Monitor(server);//add server to monitor
 
