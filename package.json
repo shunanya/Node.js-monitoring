@@ -1,6 +1,6 @@
 {
   "name": "node-monitor",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "Node.js server monitor module",
   "main": "./node_monitor_plugin/src/monitor",
   "scripts": {
@@ -9,10 +9,6 @@
   "repository": {
     "type": "git",
     "url": "git://github.com/shunanya/Node.js-monitoring.git"
-  },
-  "dependencies": {
-    "log4js": "> 0.4.0",
-    "node_hash": ">= 0.2.0"
   },
   "devDependencies": {
     "log4js": "> 0.4.0",
