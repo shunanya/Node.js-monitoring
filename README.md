@@ -85,7 +85,12 @@ To use existing scripts you will need to do some changes that will correspond yo
         - you may do also definition of DURATION between sending results (currently it is declared as 5 mins)
         - optionally you can also change the node server monitor access url - NODE_MONITOR and other constats (strongly no recommended) 
         
-That's all. Now you can run __nmon_start.sh__ and monitoring process will be started.
+That's all. Now you can controlling the script by the following command  
+
+        ./NodeMonitor.sh {start|stop|restart}
+
+and monitoring process will be started, stopped or restarted.  
+Please note also that the script run as a daemon process so it will works even when your session will be closed.
 
 ##### You can also getting monitoring data from monitis 
 To do so you should use __nmon_getdata.sh__ script by following pattern  
