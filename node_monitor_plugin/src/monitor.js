@@ -120,6 +120,7 @@ function addToMonitors(server, options){
 		mon_server['server'] = server;
 		mon_server['listen'] = server.address()['port'];//host;
 		monitors.push(mon_server);
+		server.setMaxListeners(0); // allows processing unlimited numbers of listeners
 		logger.info("Server "+host+" added to monitors chain");
 		return mon_server;
 	}
