@@ -573,7 +573,7 @@ function checkAccess(access_code) {
 		|| access_code == hash.md5((time_min + 1).toString()))) {
 		return true;
 	}
-	logger.debug("Correct access code is "+hash.md5(time_min.toString()));
+	logger.error("Wrong access: Correct access code is "+hash.md5(time_min.toString()));
 	return false;
 }
 

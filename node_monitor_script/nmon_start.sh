@@ -79,7 +79,7 @@ do
 		error "$ret" "$NAME - $MSG"
 		continue
 	fi
-	get_measure "DUMMY_CODE"		# call measure function
+	get_measure "$DUMMY_CODE"		# call measure function
 	ret="$?"
 	echo $NAME - DEBUG ret = "$ret"  return_value = "$return_value"
 	if [[ ($ret -ne 0) ]]

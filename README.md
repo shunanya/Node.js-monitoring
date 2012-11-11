@@ -60,7 +60,7 @@ You need to add the following two lines in your code
 
 Beginning this time the monitor will be collecting the measuring data and sending them by HTTP request that should correspond to the following pattern.  
 
-        http://127.0.0.1:10010/node_monitor?action=getdata&access_code=monitis
+        http://127.0.0.1:10010/node_monitor?action=getdata&access_code=<generated code|monitis>
  
     where  
         10010 - the listen port of monitor plugin  
@@ -89,7 +89,7 @@ To use existing scripts you will need to do some changes that will correspond yo
         
 That's all. Now you can controlling the script by the following command  
 
-        ./NodeMonitor.sh {start|stop|restart}
+        ./NodeMonitor.sh {status|start|stop|restart}
 
 and monitoring process will be started, stopped or restarted.  
 Please note also that the script run as a daemon process so it will works even when your session will be closed.
