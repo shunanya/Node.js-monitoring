@@ -59,7 +59,7 @@ exports.file_info = file_info;
  */
 function temp_dir(){
 	var tmp_dir = path.join(JSON.parse(JSON.stringify(process.env)).HOME, "tmp");
-	if (!path.existsSync(tmp_dir)) {
+	if (!fs.existsSync(tmp_dir)) {
 		console.log("Creating directory: "+tmp_dir);
 		fs.mkdirSync(tmp_dir, 16877);
 	}

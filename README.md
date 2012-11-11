@@ -71,7 +71,9 @@ Beginning this time the monitor will be collecting the measuring data and sendin
 Please notice that monitor plugin for security reason currently listen localhost only   
 
 ##### You should start monitor shell script firstly
-It will periodically ask node server plugin for measured data. If Node server doesn't start yed or down script will send corresponding information to the monitis. As Node server will be available the measure will be grabbing and sending to the monitis.
+It will periodically ask node server plugin for measured data.  
+If Node server doesn't start yed or down script will send corresponding information to the monitis.  
+As Node server will be available the measure will be grabbing and sending to the monitis.  
  
 To use existing scripts you will need to do some changes that will correspond your account and data
 

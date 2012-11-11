@@ -1,6 +1,6 @@
 {
   "name": "node-monitor",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "Node.js server monitor module",
   "main": "./node_monitor_plugin/src/monitor",
   "scripts": {
@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git://github.com/shunanya/Node.js-monitoring.git"
   },
-  "devDependencies": {
+  "dependencies": {
     "log4js": "> 0.4.0",
     "node_hash": ">= 0.2.0"
   },
@@ -32,5 +32,5 @@
        "src": "./node_monitor_plugin/src"
 
    },
-   "license": "BSD"
+   "license": "MIT"
 }

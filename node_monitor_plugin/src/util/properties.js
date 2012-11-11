@@ -26,7 +26,7 @@ exports.init = function(rpath) {
 	var cur_path = start_dir; // current folder
 	while (cur_path != end_dir) {
 		file = path.join(cur_path, '..', properties_file);
-		if (path.existsSync(file)) {
+		if (fs.existsSync(file)) {
 			logger.info("Opening confihuration file: " + file);
 			try {
 				properties = JSON.parse(fs.readFileSync(file, 'utf8'));

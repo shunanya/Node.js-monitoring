@@ -3,17 +3,29 @@
 #usage: NodeMonitor.sh [command]
 #allowed commands: start (default); stop; restart
 
-cmd=0
-if [[ "x$1" != "x" ]]
+cmd=-1  #status monitor (default value)
+if [[ (${#*} -gt 0) ]] #number of positional params
 then
-	if [[ ("$1" == "stop") ]]
-	then
-		cmd=1	#stop
-		echo "Command for stopping..."
-	else
-		cmd=2	#restart
-		echo "Command for restarting"
-	fi
+    case $1 in
+      status*)
+	cmd=-1	#status
+	echo "Command for status..."
+	;;
+      start*)
+	cmd=0	#start
+	echo "Command for starting..."
+	;;
+      stop*)
+	cmd=1	#stop
+	echo "Command for stopping..."
+	;;
+      restart*)
+	cmd=2	#restart
+	echo "Command for restarting"
+	;;
+      *)
+    esac
+	
 fi
 
 # starting Node.js monitor
@@ -22,7 +34,10 @@ pid=`ps -efw | grep -i 'nmon_start.sh' | grep -v grep | awk '{print $2} ' `
 if [[ "$pid" ]]  
 then
 	echo "---Node.js Monitor is running with pid = $pid"
-	if [[ ($cmd -eq 0) ]] #start monitor
+	if [[ ($cmd -lt 0) ]] #status monitor
+	then
+	  exit 0
+	elif [[ ($cmd -eq 0) ]] #start monitor
 	then
 		echo "---Node.js Monitor is already running - couldn't start a new one!!!"
 		exit 1
@@ -37,7 +52,7 @@ then
 			sleep 5
 		fi
 	fi
-elif [[ ($cmd -eq 1) ]]
+elif [[ ($cmd -eq 1) || ($cmd -lt 0) ]]
 then
 	echo "Node.js Monitor isn't running!!!"
 	exit 0

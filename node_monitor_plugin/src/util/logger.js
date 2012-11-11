@@ -15,7 +15,7 @@ function search_file(file_path){
 	var cur_path = start_dir; // current folder
 	while (cur_path != end_dir) {
 		_file = path.normalize(path.resolve(cur_path, '..', file_path));
-		if (path.existsSync(_file)) {
+		if (fs.existsSync(_file)) {
 			file = _file;
 			break;
 		} else {
@@ -35,7 +35,7 @@ if (conf_file){
 
 var Logger = function(logger_name){
 	var log = log4js.getLogger(logger_name);
-	log.info(">>>>>>>>> Logger for '"+log.getName()+"' initialized with success. Log Level: "+log.getLevel().toString()+"<<<<<<<<<");
+	log.info(">>>>>>>>> Logger for '"+log.category+"' initialized with success. Log Level: "+log.level.toString()+"<<<<<<<<<");
 	return log;
 }
 

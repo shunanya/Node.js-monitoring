@@ -16,6 +16,7 @@ declare -r MON_GET_DATA="getData"
 declare -r MON_GET_ADATA="getAData"
 
 declare -r MON_ACCESS="access_code"
+declare -r DUMMY_CODE="monitis"
 
 # format of result params - name1:displayName1:uom1:Integer
 # name, displayName, uom and value should be URL encoded.

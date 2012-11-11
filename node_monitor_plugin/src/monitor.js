@@ -3,8 +3,11 @@ var events = require('events')
 	,http = require('http')
 	,url = require('url')
 	,hash = require('node_hash')
-	,utils = require('./util/utils')
-	,logger = require('./util/logger').Logger('node_monitor');
+	,utils = require('./util/utils');
+//	,logger = require('./util/logger').Logger('node_monitor');
+
+exports.Logger = Logger = require('./util/logger');
+var logger = Logger.Logger('node_monitor');
 
 // ****** Constants ******
 var HOST_LISTEN = "127.0.0.1";
