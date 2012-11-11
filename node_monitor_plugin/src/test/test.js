@@ -1,8 +1,8 @@
 var  http = require('http')
 	,https = require('https')
 	,fs = require('fs')
-	,logger = require('../util/logger').Logger('node_server')
-	,monitor = require('../monitor');
+	,monitor = require('node-monitor')
+	,logger = Logger.Logger('node_server');
 
 var options = {
 		https: {/* HTTPS certificates*/
