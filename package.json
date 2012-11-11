@@ -1,6 +1,6 @@
 {
   "name": "node-monitor",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "description": "Node.js server monitor module",
   "main": "./node_monitor_plugin/src/monitor",
   "scripts": {
@@ -25,7 +25,7 @@
    "bugs": {
        "url": "http://github.com/shunanya/Node.js-monitoring/issues"
    },
-   "engines": [ "node >=0.4" ],
+   "engines": [ "node >=0.8" ],
    "directories": {
        "log": "./node_monitor_plugin/log",
        "properties": "./node_monitor_plugin/properties",

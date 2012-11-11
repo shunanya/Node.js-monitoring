@@ -1,0 +1,1 @@
+[2012-11-11 12:29:45.525] [INFO] node_monitor - SUM: status:IDLE;uptime:00.04.26;avr_net:0.000;max_net:0.000;avr_resp:0.000;max_resp:0.000;avr_total:0.000;max_total:0.000;in_rate:0.000;out_rate:0.000;active:0.00;load:0.000 | {"mon_time":"101.149","listen":"{8081}"}
