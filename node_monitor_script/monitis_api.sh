@@ -468,7 +468,3 @@ function get_custom_monitor_data(){
 	
 	return 0
 }
-
-
-
-

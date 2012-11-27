@@ -15,7 +15,8 @@ var PORT_LISTEN = 10010;
 // ***********************
 
 var monitors = 	[];
-var max_value = Number.MAX_VALUE;
+var MAX_VALUE = Number.MAX_VALUE;
+var MAX_TOP = 3;
 var STATUS_OK = 'OK';
 var STATUS_NOK = 'NOK';
 var STATUS_DOWN = 'DOWN';
@@ -37,17 +38,17 @@ function createMon() {
 		//Total
 		'time' : 0,
 		'avr_time' : 0,
-		'min_time' : max_value,
+		'min_time' : MAX_VALUE,
 		'max_time' : 0,	
 		//Network latency
 		'net_time' : 0,
 		'avr_net_time' : 0,
-		'min_net_time' : max_value,
+		'min_net_time' : MAX_VALUE,
 		'max_net_time' : 0,	
 		//Server responce time
 		'resp_time' : 0,
 		'avr_resp_time' : 0,
-		'min_resp_time' : max_value,
+		'min_resp_time' : MAX_VALUE,
 		'max_resp_time' : 0,
 		//Read/Writes
 		'bytes_read' : 0,
@@ -75,12 +76,40 @@ function createMon() {
 					this[name][data] = count != undefined? count : 1;
 				}
 			},
+			'addSorted' : function(name, data, sort_key){
+				if (MAX_TOP <= 0) {
+					return;
+				}
+				if (!this[name]){
+					this[name] = [];
+				}
+				var t = {'t': sort_key, 'data': data};
+				this[name].push(t);
+				if (this[name].length > 1){
+					this[name].sort(function(a,b){
+						return b['t'] - a['t'];
+					})
+				}
+				if (this[name].length > MAX_TOP){
+					this[name].pop();
+				}
+//				logger.info('addSorted: '+JSON.stringify(this[name]));
+//				logger.info('info: '+JSON.stringify(this));
+			},
 			'addAll' : function(info) {
 				var self = this;
 				var t = "";
+				function isArray(obj) {return obj.constructor == Array;}
 				JSON.stringify(info, function(key, value) {
-					if (utils.var_type(value) == 'Object') {
-						t = key;
+					if (typeof(value) == 'object') {
+						if (!isArray(value)){
+							t = key;
+						} else {
+							value.forEach(function(element, index, value){
+								self.addSorted(key, element['data'], element['t'])
+							}, self);
+							return;
+						}
 					} else if (utils.var_type(value) != 'function' && t.length > 0) {
 						self.add(t, key, value);
 					}
@@ -111,6 +140,9 @@ function addToMonitors(server, options){
 		logger.info("Registering Monitor: "+JSON.stringify(options));
 		active = (options['active'] && options['active'] == 'yes')?true:false;
 		collect_all = (options['collect_all'] && options['collect_all'] == 'yes')?true:false;
+		if (options['max_top']){
+			MAX_TOP = options['max_top'] >= 0?options['max_top']:0;
+		}
 	}
 	
 	if (active && server && (monitors.length == 0 || !monitors.some(function(element){return element['server'] == server;}))) {		
@@ -161,7 +193,7 @@ function addExceptionToMonitor(server, callback){
 }
 exports.addExceptionToMonitor = addExceptionToMonitor;
 
-function addResultsToMonitor(server, requests, post_count, get_count, net_duration, pure_duration, total_duration, bytes_read, bytes_written, status_code, info, callback){
+function addResultsToMonitor(server, requests, post_count, get_count, net_duration, pure_duration, total_duration, bytes_read, bytes_written, status_code, info, userInfo, callback){
 	var ret = false;
 	if (server && monitors.length > 0) {
 		for (var i = 0; i <monitors.length; i++) {
@@ -197,6 +229,9 @@ function addResultsToMonitor(server, requests, post_count, get_count, net_durati
 				mon_server['timeE'] = new Date().getTime();
 				if (utils.var_type(info) == 'Object'){
 					mon_server['info'].addAll(info);
+				}
+				if (userInfo){
+					mon_server['info'].addSorted('top'+MAX_TOP, userInfo, total_duration);
 				}
 				ret = true;
 				break;
@@ -426,12 +461,34 @@ function getRequestInfo(request, collect_all) {
 			tmp.info.add('aname', value);
 		}
 		value = request.headers['x-forwarded-for'] || request.connection.remoteAddress || request.socket.remoteAddress
-				|| request.connection.socket.remoteAddress;
+				|| request.connection.socket.remoteAddress || 0;
 		if (value && value.length > 0) {
 			tmp.info.add('access_from', value);
 		}
 	}
 	return tmp.info;
+}
+
+/**
+ * 
+ * @param request
+ * @returns OBJECT with user info
+ */
+function getUserInfo(request) {
+	var tmp = {};
+//	logger.info("\nRequest\n"+sys.inspect(request));
+	var value = request.headers['x-forwarded-for'] 
+			|| request.connection.remoteAddress 
+			|| request.socket.remoteAddress
+			|| request.connection.socket.remoteAddress;
+	if (value && value.length > 0) {
+		tmp['ip'] = value;
+	}
+	value = request.headers['host'];
+	if (value && value.length > 0) {
+		tmp.info.add('host', value);
+	}
+	return tmp;
 }
 
 /**
@@ -455,6 +512,7 @@ var Monitor = exports.Monitor = function(server, options) {
 			params['Method'] = req.method;
 			params["content-length"] = req.headers['content-length'];
 			params['info'] = getRequestInfo(req, mon_server['collect_all']);
+			params['user'] = getUserInfo(req);
 
 			// params['memory'] = sys.inspect(process.memoryUsage());
 			// params['free'] = os.freemem()/os.totalmem()*100;
@@ -509,7 +567,7 @@ var Monitor = exports.Monitor = function(server, options) {
 					logger.info("***SOCKET.CLOSE: " + JSON.stringify(params));
 					addResultsToMonitor(server, 1, (req.method == "POST" ? 1 : 0), (req.method == "GET" ? 1 : 0),
 							params['net_duration'], params['pure_duration'], params['total_duration'],
-							params['Read'], params['Written'], res.statusCode, params['info'],
+							params['Read'], params['Written'], res.statusCode, params['info'], params['user'],
 							function(error) {
 								if (error)
 									logger.error("SOCKET.CLOSE-addResultsToMonitor: error while add");
@@ -542,7 +600,7 @@ var Monitor = exports.Monitor = function(server, options) {
 					logger.info("***RES.FINISH: " + JSON.stringify(params));
 					addResultsToMonitor(server, 1, (req.method == "POST" ? 1 : 0), (req.method == "GET" ? 1 : 0),
 							params['net_duration'], params['pure_duration'], params['total_duration'],
-							params['Read'], params['Written'], res.statusCode, params['info'],
+							params['Read'], params['Written'], res.statusCode, params['info'], params['user'],
 							function(error) {
 								if (error)
 									logger.error("RES.FINISH-addResultsToMonitor: error while add");

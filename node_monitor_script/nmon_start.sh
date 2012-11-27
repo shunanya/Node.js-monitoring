@@ -131,21 +131,7 @@ do
 			continue
 		fi
 		# Transforming JSON string to array (first level only)
-		details=${param/'{'/''}
-		details=${details/%'}'/''}
-		details=${details//'},'/'} + '}
-		details=${details//'"'/''}
-		if [[ (${#details} -le 0) ]]
-		then
-			echo "No any detailed record"
-			continue
-		fi
-		param="details + $details"		
-		unset array
-		OIFS=$IFS
-		IFS='+'
-		array=( $param )
-		IFS=$OIFS
+		array=`json2array "$param" `
 		array_length="${#array[@]}"
 		if [[ ($array_length -gt 0) ]]
 		then

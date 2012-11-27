@@ -36,6 +36,6 @@ declare -r RESULT_PARAMS="$P0;$P1;$P11;$P12;$P2;$P3"
 declare -r RESP_DOWN="status:DOWN"
 
 # format of additional params - name:displayName:uom:String
-declare -r ADDITIONAL_PARAMS="details:Details::3"	
-	
-declare    DURATION=5	 							# information sending duration [min] (REPLACE by any desired value)
+declare -r ADDITIONAL_PARAMS="details:Details::3"
+
+declare    DURATION=5 						# information sending duration [min] (REPLACE by any desired value)

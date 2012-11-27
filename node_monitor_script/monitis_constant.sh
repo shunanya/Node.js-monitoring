@@ -14,9 +14,9 @@ declare -r OUTPUT_TYPE="JSON"						# Output type that is used in the current pro
 declare -r VALIDATION_METHOD="token"				# Request validation method that is used in the current project implementation
 
 # Declaration of Monitis API actions
-declare -r API_GET_TOKEN_ACTION="authToken"		# GetToken action
+declare -r API_GET_TOKEN_ACTION="authToken"			# GetToken action
 declare -r API_ADD_MONITOR_ACTION="addMonitor"		# AddMonitor action
-declare -r API_ADD_RESULT="addResult"			# AddResult action
+declare -r API_ADD_RESULT="addResult"				# AddResult action
 declare -r API_ADD_ADDITIONAL_RESULT="addAdditionalResults"	# AddAdditionalResult action
 declare -r API_GET_MONITOR_INFO="getMonitorInfo"	# GetMonitorInfo action
 declare -r API_GET_MONITOR_LIST="getMonitors"		# GetMonitorsList action

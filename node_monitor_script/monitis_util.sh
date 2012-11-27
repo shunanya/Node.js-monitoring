@@ -123,9 +123,10 @@ function jsonval() {
 function create_additional_param() {
 	if [[ (-n $1) ]]
 	then
-		array="$1"
+		array=( $1 )
 		if [[ (${#array[*]} -gt 0) ]]
 		then
+			array_length=${#array[*]}
 			param="["
 			for (( i=1; i < $array_length; i++ ))
 			do
@@ -145,6 +146,37 @@ function create_additional_param() {
 		echo Not defined mandatory parameter
 		return 4
 	fi
+	return 0
+}
+
+# Transforming JSON string to array (first level only)
+#
+# @param $1 - json string that contains the data to be transforming
+# @return Strings array
+function json2array(){
+	local param="$1"
+	local details=""
+	local array
+	if [[ (${#param} -gt 0) ]]
+	then
+		details=${param/'{'/''}
+		details=${details/%'}'/''}
+		details=${details//'},'/'} + '}
+		details=${details//'],'/'] + '}
+		details=${details//'"'/''}	
+		details=${details//' '/''}
+				
+		param="details + $details"	
+		
+		unset array
+		OIFS=$IFS
+		IFS='+'
+		array=($param)
+		IFS=$OIFS	
+	else
+		return 1	
+	fi
+	echo "${array[@]}"
 	return 0
 }
 
