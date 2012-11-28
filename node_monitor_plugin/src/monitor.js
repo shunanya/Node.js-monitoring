@@ -16,7 +16,8 @@ var PORT_LISTEN = 10010;
 
 var monitors = 	[];
 var MAX_VALUE = Number.MAX_VALUE;
-var MAX_TOP = 3;
+var TOP_MAX = 3; // The maximum number of collected requests that spent most time for execution
+var TOP_LIMIT = 3; // the monitor have to collect info when exceeding the number of specified seconds only
 var STATUS_OK = 'OK';
 var STATUS_NOK = 'NOK';
 var STATUS_DOWN = 'DOWN';
@@ -76,21 +77,21 @@ function createMon() {
 					this[name][data] = count != undefined? count : 1;
 				}
 			},
-			'addSorted' : function(name, data, sort_key){
-				if (MAX_TOP <= 0) {
+			'addSorted' : function(name, data, sort_key_value){
+				if (TOP_MAX <= 0 || TOP_LIMIT > sort_key_value) {
 					return;
 				}
 				if (!this[name]){
 					this[name] = [];
 				}
-				var t = {'t': sort_key, 'data': data};
+				var t = {'t': sort_key_value, 'data': data};
 				this[name].push(t);
 				if (this[name].length > 1){
 					this[name].sort(function(a,b){
 						return b['t'] - a['t'];
 					})
 				}
-				if (this[name].length > MAX_TOP){
+				if (this[name].length > TOP_MAX){
 					this[name].pop();
 				}
 //				logger.info('addSorted: '+JSON.stringify(this[name]));
@@ -129,23 +130,27 @@ function createMon() {
  *            {Object}
  * @param options
  *            {Object} the options for given server monitor 
- *            {'active': ('yes' | 'no'), 'collect_all': ('yes' | 'no')}
+ *            {'collect_all': ('yes' | 'no'), 'top':{'max':<value>, 'limit':<value>}}
+ *       where top.max - the maximum number of collected requests that spent most time for execution
+ *             top.limit - the monitor have to collect info when exceeding the number of specified seconds only
+ *  default - {'collect_all': 'no', 'top':{'max':3, 'limit':3}}
  * @returns {Object} mon_server structure if given server added to the monitor
  *          chain null if server is already in monitor
  */
 function addToMonitors(server, options){
-	var active = true;
 	var collect_all = false;
 	if ('object' == typeof options) {
 		logger.info("Registering Monitor: "+JSON.stringify(options));
-		active = (options['active'] && options['active'] == 'yes')?true:false;
 		collect_all = (options['collect_all'] && options['collect_all'] == 'yes')?true:false;
-		if (options['max_top']){
-			MAX_TOP = options['max_top'] >= 0?options['max_top']:0;
+		if (options['top'] && options['top']['max']){
+			TOP_MAX = options['top']['max'] >= 0?options['top']['max']:0;
+		}
+		if (options['top'] && options['top']['limit']){
+			TOP_LIMIT = options['top']['limit'] >= 0?options['top']['limit']:0;
 		}
 	}
 	
-	if (active && server && (monitors.length == 0 || !monitors.some(function(element){return element['server'] == server;}))) {		
+	if (server && (monitors.length == 0 || !monitors.some(function(element){return element['server'] == server;}))) {		
 		var mon_server = createMon();
 		var host = server.address()['address']+":"+server.address()['port'];
 		mon_server['collect_all'] = collect_all;
@@ -231,7 +236,7 @@ function addResultsToMonitor(server, requests, post_count, get_count, net_durati
 					mon_server['info'].addAll(info);
 				}
 				if (userInfo){
-					mon_server['info'].addSorted('top'+MAX_TOP, userInfo, total_duration);
+					mon_server['info'].addSorted('top'+TOP_MAX, userInfo, total_duration);
 				}
 				ret = true;
 				break;
@@ -495,6 +500,15 @@ function getUserInfo(request) {
  * Main Monitor class
  * 
  * It only should be initiated when given server wants to be under monitoring
+ *  * @param server
+ *            {Object} to be under monitoring
+ * @param options
+ *            {Object} the options for given server monitor 
+ *            {'collect_all': ('yes' | 'no'), 'top':{'max':<value>, 'limit':<value>}}
+ *       where top.max - the maximum number of collected requests that spent most time for execution
+ *             top.limit - the monitor have to collect info when exceeding the number of specified seconds only
+ *  default - {'collect_all': 'no', 'top':{'max':3, 'limit':3}}
+ *  
  */ 
 var Monitor = exports.Monitor = function(server, options) {
 	var mon_server = addToMonitors(server, options);
