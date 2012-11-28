@@ -491,7 +491,7 @@ function getUserInfo(request) {
 	}
 	value = request.headers['host'];
 	if (value && value.length > 0) {
-		tmp.info.add('host', value);
+		tmp['host'] = value;
 	}
 	return tmp;
 }
