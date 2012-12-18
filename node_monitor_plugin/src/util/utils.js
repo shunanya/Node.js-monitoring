@@ -263,6 +263,143 @@ exports.hexDecode = function (data){
 	return result.join('');
 }
 
+//======================================
+/*
+ * Converts object properties into array with some calculations defined in the option 
+ * 
+ * Optional option defines the action for fulfilling specified action on existing property value 
+ * by using another (or given value)and put result into property (new one or replace existing one)  
+ *  
+ * {'property':<new property name>, 'action':{'add'|'subtract'|'divide'|'multiply'}
+ * 	'param1':<existing dividend property name>, 
+ * 	'param2':<value of action or existing property name>
+ * 	}
+     */
+ function obj2array(obj, option) {
+	var arr = [];
+	var tmp;
+	for ( var prop in obj) {
+		if (obj.hasOwnProperty(prop)) {
+			if (option && Array.isArray(option) && option.length > 0){
+				for (var i = 0; i < option.length; i++) {
+					opt = option[i];
+						if (opt['param1'] && obj[prop][opt['param1']] && opt['param2']) {
+							if (typeof opt['param2'] == "number") {
+								switch (opt['action']){
+									case 'add':
+										tmp = (obj[prop][opt['param1']] + opt['param2']).toFixed(3);
+										break;
+									case 'subtract':
+										tmp = (obj[prop][opt['param1']] - opt['param2']).toFixed(3);
+										break;																				
+									case 'divide':
+										tmp = (obj[prop][opt['param1']] / opt['param2']).toFixed(3);
+										break;										
+									case 'multiply':
+										tmp = (obj[prop][opt['param1']] * opt['param2']).toFixed(3);
+										break;																				
+								}
+							} else if (obj[prop][opt['param2']]) {
+								switch (opt['action']){
+									case 'add':
+										tmp = (obj[prop][opt['param1']] + obj[prop][opt['param2']]).toFixed(3);
+										break;
+									case 'subtract':
+										tmp = (obj[prop][opt['param1']] - obj[prop][opt['param2']]).toFixed(3);
+										break;																				
+									case 'divide':
+										tmp = (obj[prop][opt['param1']] / obj[prop][opt['param2']]).toFixed(3);
+										break;										
+									case 'multiply':
+										tmp = (obj[prop][opt['param1']] * obj[prop][opt['param2']]).toFixed(3);
+										break;																				
+								}
+							}
+						}
+						if (opt['property'])//put into existing property
+							obj[prop][opt['property']] = tmp;
+				}
+			}
+			arr.push(obj[prop]);
+		}
+	}
+	return arr;
+}
+exports.obj2array = obj2array;
+
+ /**
+  * Sorting array with objects items byProperty(String <property of object for sorting> [, descending]) 
+  * the default sorting style is ascending. e.g. <array>.sort(byProperty("topSpeed"));
+  */
+ var byProperty = function(prop, descending) {
+ 	return function(a, b) {
+ 		var ret = 0;
+ 		if (!a[prop]) {
+ 			console.log("a[prop] = " + a[prop]);
+ 		} else if (typeof a[prop] == "number") {
+ 			ret = (a[prop] - b[prop]);
+ 		} else {
+ 			ret = ((a[prop] < b[prop]) ? -1 : ((a[prop] > b[prop]) ? 1 : 0));
+ 		}
+ 		if (descending) {
+ 			ret = -ret;
+ 		}
+ 		return ret;
+ 	};
+ };
+
+
+/*
+ * Converts object into properties array and sort it
+ * 
+ * where optional option defines the additional actions
+ * 
+ * { 'byprop':<name of property for sorting by> [, 'descending': {true|false} ] [, 'top': <top_number>][, 'format': <precision number>]
+ *   [,'array_option':<array actions> ] }
+ *   
+ * it returns array without sorting if sorting options isn't defined.
+ */   
+function sortObject(obj, option) {
+	arr = obj2array(obj, option['array_option']);
+    if (option['byprop']){
+        arr.sort(byProperty(option['byprop'], option['descending']));
+    }
+    if (option['top'] && option['top'] < arr.length){
+    	arr.splice(option['top'],(arr.length - option['top']));
+    }
+    if (option['format'] && typeof(option['format']) == 'number') {
+    	var n = option['format'];
+    	arr.forEach(function(v) {
+    		if (typeof(v) == 'object'){
+    			for(var prop in v){
+    				if (typeof(v[prop]) == 'number'){
+    					v[prop] = v[prop].toFixed(n);
+    				}
+    			}
+    		}
+    	});
+    }
+    return arr; // returns array
+}    
+exports.sortObject = sortObject;
+    
+/**
+ * Direct replacement for Java String.hashCode() method 
+ * implemented in Javascript.
+ */
+hashCode = function(str){
+    var hash = 0;
+    if (str.length == 0) return hash;
+    for (var i = 0; i < str.length; i++) {
+        char = str.charCodeAt(i);
+        hash = ((hash<<5)-hash)+char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash;
+}
+exports.hashCode = hashCode;
+
+//======================================
 /**
  * Return the type of o as a string
  * -If o is null, return "null", if o is NaN, return "nan".
@@ -299,366 +436,6 @@ Function.prototype.getName = function() {
 	return this.name = this.toString().match(/function\s*([^(]*)\(/)[1];
 };
 	
-///**
-// * original by: Ash Searle (http://hexmen.com/blog/)
-// * http://kevin.vanzonneveld.net
-// * 
-// * example 1: sprintf("%01.2f", 123.1);
-// * returns 1: 123.10
-// * 
-// * example 2: sprintf("[%10s]", 'monkey');
-// * returns 2: '[    monkey]'
-// * 
-// * example 3: sprintf("[%'#10s]", 'monkey');
-// * returns 3: '[####monkey]'
-// * 
-// */
-//exports.sprintf = function () {
-//    var regex = /%%|%(\d+\$)?([-+\'#0 ]*)(\*\d+\$|\*|\d+)?(\.(\*\d+\$|\*|\d+))?([scboxXuidfegEG])/g;
-//    var a = arguments,
-//        i = 0,
-//        format = a[i++];
-//
-//    // pad()
-//    var pad = function (str, len, chr, leftJustify) {
-//        if (!chr) {
-//            chr = ' ';
-//        }
-//        var padding = (str.length >= len) ? '' : Array(1 + len - str.length >>> 0).join(chr);
-//        return leftJustify ? str + padding : padding + str;
-//    };
-//
-//    // justify()
-//    var justify = function (value, prefix, leftJustify, minWidth, zeroPad, customPadChar) {
-//        var diff = minWidth - value.length;
-//        if (diff > 0) {
-//            if (leftJustify || !zeroPad) {
-//                value = pad(value, minWidth, customPadChar, leftJustify);
-//            } else {
-//                value = value.slice(0, prefix.length) + pad('', diff, '0', true) + value.slice(prefix.length);
-//            }
-//        }
-//        return value;
-//    };
-//
-//    // formatBaseX()
-//    var formatBaseX = function (value, base, prefix, leftJustify, minWidth, precision, zeroPad) {
-//        // Note: casts negative numbers to positive ones
-//        var number = value >>> 0;
-//        prefix = prefix && number && {
-//            '2': '0b',
-//            '8': '0',
-//            '16': '0x'
-//        }[base] || '';
-//        value = prefix + pad(number.toString(base), precision || 0, '0', false);
-//        return justify(value, prefix, leftJustify, minWidth, zeroPad);
-//    };
-//
-//    // formatString()
-//    var formatString = function (value, leftJustify, minWidth, precision, zeroPad, customPadChar) {
-//        if (precision != null) {
-//            value = value.slice(0, precision);
-//        }
-//        return justify(value, '', leftJustify, minWidth, zeroPad, customPadChar);
-//    };
-//
-//    // doFormat()
-//    var doFormat = function (substring, valueIndex, flags, minWidth, _, precision, type) {
-//        var number;
-//        var prefix;
-//        var method;
-//        var textTransform;
-//        var value;
-//
-//        if (substring == '%%') {
-//            return '%';
-//        }
-//
-//        // parse flags
-//        var leftJustify = false,
-//            positivePrefix = '',
-//            zeroPad = false,
-//            prefixBaseX = false,
-//            customPadChar = ' ';
-//        var flagsl = flags.length;
-//        for (var j = 0; flags && j < flagsl; j++) {
-//            switch (flags.charAt(j)) {
-//            case ' ':
-//                positivePrefix = ' ';
-//                break;
-//            case '+':
-//                positivePrefix = '+';
-//                break;
-//            case '-':
-//                leftJustify = true;
-//                break;
-//            case "'":
-//                customPadChar = flags.charAt(j + 1);
-//                break;
-//            case '0':
-//                zeroPad = true;
-//                break;
-//            case '#':
-//                prefixBaseX = true;
-//                break;
-//            }
-//        }
-//
-//        // parameters may be null, undefined, empty-string or real valued
-//        // we want to ignore null, undefined and empty-string values
-//        if (!minWidth) {
-//            minWidth = 0;
-//        } else if (minWidth == '*') {
-//            minWidth = +a[i++];
-//        } else if (minWidth.charAt(0) == '*') {
-//            minWidth = +a[minWidth.slice(1, -1)];
-//        } else {
-//            minWidth = +minWidth;
-//        }
-//
-//        // Note: undocumented perl feature:
-//        if (minWidth < 0) {
-//            minWidth = -minWidth;
-//            leftJustify = true;
-//        }
-//
-//        if (!isFinite(minWidth)) {
-//            throw new Error('sprintf: (minimum-)width must be finite');
-//        }
-//
-//        if (!precision) {
-//            precision = 'fFeE'.indexOf(type) > -1 ? 6 : (type == 'd') ? 0 : undefined;
-//        } else if (precision == '*') {
-//            precision = +a[i++];
-//        } else if (precision.charAt(0) == '*') {
-//            precision = +a[precision.slice(1, -1)];
-//        } else {
-//            precision = +precision;
-//        }
-//
-//        // grab value using valueIndex if required?
-//        value = valueIndex ? a[valueIndex.slice(0, -1)] : a[i++];
-/////**
-//* original by: Ash Searle (http://hexmen.com/blog/)
-//* http://kevin.vanzonneveld.net
-//* 
-//* example 1: sprintf_("%01.2f", 123.1);
-//* returns 1: 123.10
-//* 
-//* example 2: sprintf_("[%10s]", 'monkey');
-//* returns 2: '[    monkey]'
-//* 
-//* example 3: sprintf_("[%'#10s]", 'monkey');
-//* returns 3: '[####monkey]'
-//* 
-//*/
-//exports.sprintf_ = function () {
-// var regex = /%%|%(\d+\$)?([-+\'#0 ]*)(\*\d+\$|\*|\d+)?(\.(\*\d+\$|\*|\d+))?([scboxXuidfegEG])/g;
-// var a = arguments,
-//     i = 0,
-//     format = a[i++];
-//
-// // pad()
-// var pad = function (str, len, chr, leftJustify) {
-//     if (!chr) {
-//         chr = ' ';
-//     }
-//     var padding = (str.length >= len) ? '' : Array(1 + len - str.length >>> 0).join(chr);
-//     return leftJustify ? str + padding : padding + str;
-// };
-//
-// // justify()
-// var justify = function (value, prefix, leftJustify, minWidth, zeroPad, customPadChar) {
-//     var diff = minWidth - value.length;
-//     if (diff > 0) {
-//         if (leftJustify || !zeroPad) {
-//             value = pad(value, minWidth, customPadChar, leftJustify);
-//         } else {
-//             value = value.slice(0, prefix.length) + pad('', diff, '0', true) + value.slice(prefix.length);
-//         }
-//     }
-//     return value;
-// };
-//
-// // formatBaseX()
-// var formatBaseX = function (value, base, prefix, leftJustify, minWidth, precision, zeroPad) {
-//     // Note: casts negative numbers to positive ones
-//     var number = value >>> 0;
-//     prefix = prefix && number && {
-//         '2': '0b',
-//         '8': '0',
-//         '16': '0x'
-//     }[base] || '';
-//     value = prefix + pad(number.toString(base), precision || 0, '0', false);
-//     return justify(value, prefix, leftJustify, minWidth, zeroPad);
-// };
-//
-// // formatString()
-// var formatString = function (value, leftJustify, minWidth, precision, zeroPad, customPadChar) {
-//     if (precision != null) {
-//         value = value.slice(0, precision);
-//     }
-//     return justify(value, '', leftJustify, minWidth, zeroPad, customPadChar);
-// };
-//
-// // doFormat()
-// var doFormat = function (substring, valueIndex, flags, minWidth, _, precision, type) {
-//     var number;
-//     var prefix;
-//     var method;
-//     var textTransform;
-//     var value;
-//
-//     if (substring == '%%') {
-//         return '%';
-//     }
-//
-//     // parse flags
-//     var leftJustify = false,
-//         positivePrefix = '',
-//         zeroPad = false,
-//         prefixBaseX = false,
-//         customPadChar = ' ';
-//     var flagsl = flags.length;
-//     for (var j = 0; flags && j < flagsl; j++) {
-//         switch (flags.charAt(j)) {
-//         case ' ':
-//             positivePrefix = ' ';
-//             break;
-//         case '+':
-//             positivePrefix = '+';
-//             break;
-//         case '-':
-//             leftJustify = true;
-//             break;
-//         case "'":
-//             customPadChar = flags.charAt(j + 1);
-//             break;
-//         case '0':
-//             zeroPad = true;
-//             break;
-//         case '#':
-//             prefixBaseX = true;
-//             break;
-//         }
-//     }
-//
-//     // parameters may be null, undefined, empty-string or real valued
-//     // we want to ignore null, undefined and empty-string values
-//     if (!minWidth) {
-//         minWidth = 0;
-//     } else if (minWidth == '*') {
-//         minWidth = +a[i++];
-//     } else if (minWidth.charAt(0) == '*') {
-//         minWidth = +a[minWidth.slice(1, -1)];
-//     } else {
-//         minWidth = +minWidth;
-//     }
-//
-//     // Note: undocumented perl feature:
-//     if (minWidth < 0) {
-//         minWidth = -minWidth;
-//         leftJustify = true;
-//     }
-//
-//     if (!isFinite(minWidth)) {
-//         throw new Error('sprintf: (minimum-)width must be finite');
-//     }
-//
-//     if (!precision) {
-//         precision = 'fFeE'.indexOf(type) > -1 ? 6 : (type == 'd') ? 0 : undefined;
-//     } else if (precision == '*') {
-//         precision = +a[i++];
-//     } else if (precision.charAt(0) == '*') {
-//         precision = +a[precision.slice(1, -1)];
-//     } else {
-//         precision = +precision;
-//     }
-//
-//     // grab value using valueIndex if required?
-//     value = valueIndex ? a[valueIndex.slice(0, -1)] : a[i++];
-//
-//     switch (type) {
-//     case 's':
-//         return formatString(String(value), leftJustify, minWidth, precision, zeroPad, customPadChar);
-//     case 'c':
-//         return formatString(String.fromCharCode(+value), leftJustify, minWidth, precision, zeroPad);
-//     case 'b':
-//         return formatBaseX(value, 2, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
-//     case 'o':
-//         return formatBaseX(value, 8, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
-//     case 'x':
-//         return formatBaseX(value, 16, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
-//     case 'X':
-//         return formatBaseX(value, 16, prefixBaseX, leftJustify, minWidth, precision, zeroPad).toUpperCase();
-//     case 'u':
-//         return formatBaseX(value, 10, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
-//     case 'i':
-//     case 'd':
-//         number = (+value) | 0;
-//         prefix = number < 0 ? '-' : positivePrefix;
-//         value = prefix + pad(String(Math.abs(number)), precision, '0', false);
-//         return justify(value, prefix, leftJustify, minWidth, zeroPad);
-//     case 'e':
-//     case 'E':
-//     case 'f':
-//     case 'F':
-//     case 'g':
-//     case 'G':
-//         number = +value;
-//         prefix = number < 0 ? '-' : positivePrefix;
-//         method = ['toExponential', 'toFixed', 'toPrecision']['efg'.indexOf(type.toLowerCase())];
-//         textTransform = ['toString', 'toUpperCase']['eEfFgG'.indexOf(type) % 2];
-//         value = prefix + Math.abs(number)[method](precision);
-//         return justify(value, prefix, leftJustify, minWidth, zeroPad)[textTransform]();
-//     default:
-//         return substring;
-//     }
-// };
-//
-// return format.replace(regex, doFormat);
-//}
-
-//        switch (type) {
-//        case 's':
-//            return formatString(String(value), leftJustify, minWidth, precision, zeroPad, customPadChar);
-//        case 'c':
-//            return formatString(String.fromCharCode(+value), leftJustify, minWidth, precision, zeroPad);
-//        case 'b':
-//            return formatBaseX(value, 2, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
-//        case 'o':
-//            return formatBaseX(value, 8, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
-//        case 'x':
-//            return formatBaseX(value, 16, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
-//        case 'X':
-//            return formatBaseX(value, 16, prefixBaseX, leftJustify, minWidth, precision, zeroPad).toUpperCase();
-//        case 'u':
-//            return formatBaseX(value, 10, prefixBaseX, leftJustify, minWidth, precision, zeroPad);
-//        case 'i':
-//        case 'd':
-//            number = (+value) | 0;
-//            prefix = number < 0 ? '-' : positivePrefix;
-//            value = prefix + pad(String(Math.abs(number)), precision, '0', false);
-//            return justify(value, prefix, leftJustify, minWidth, zeroPad);
-//        case 'e':
-//        case 'E':
-//        case 'f':
-//        case 'F':
-//        case 'g':
-//        case 'G':
-//            number = +value;
-//            prefix = number < 0 ? '-' : positivePrefix;
-//            method = ['toExponential', 'toFixed', 'toPrecision']['efg'.indexOf(type.toLowerCase())];
-//            textTransform = ['toString', 'toUpperCase']['eEfFgG'.indexOf(type) % 2];
-//            value = prefix + Math.abs(number)[method](precision);
-//            return justify(value, prefix, leftJustify, minWidth, zeroPad)[textTransform]();
-//        default:
-//            return substring;
-//        }
-//    };
-//
-//    return format.replace(regex, doFormat);
-//}
 
 /**
 sprintf() for JavaScript 0.7-beta1
@@ -688,17 +465,17 @@ that says how many digits should be displayed for floating point numbers.
 When used on a string, it causes the result to be truncated.
 
 A type specifier that can be any of:
-% — print a literal "%" character
-b — print an integer as a binary number
-c — print an integer as the character with that ASCII value
-d — print an integer as a signed decimal number
-e — print a float as scientific notation
-u — print an integer as an unsigned decimal number
-f — print a float as is
-o — print an integer as an octal number
-s — print a string as is
-x — print an integer as a hexadecimal number (lower-case)
-X — print an integer as a hexadecimal number (upper-case)
+% - print a literal "%" character
+b - print an integer as a binary number
+c - print an integer as the character with that ASCII value
+d - print an integer as a signed decimal number
+e - print a float as scientific notation
+u - print an integer as an unsigned decimal number
+f - print a float as is
+o - print an integer as an octal number
+s - print a string as is
+x - print an integer as a hexadecimal number (lower-case)
+X - print an integer as a hexadecimal number (upper-case)
 **/
 var sprintf = (function() {
 	function get_type(variable) {

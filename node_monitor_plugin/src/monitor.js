@@ -4,7 +4,6 @@ var events = require('events')
 	,url = require('url')
 	,hash = require('node_hash')
 	,utils = require('./util/utils');
-//	,logger = require('./util/logger').Logger('node_monitor');
 
 exports.Logger = Logger = require('./util/logger');
 var logger = Logger.Logger('node_monitor');
@@ -15,6 +14,7 @@ var PORT_LISTEN = 10010;
 var MAX_VALUE = Number.MAX_VALUE;
 var TOP_MAX = 3; // The maximum number of collected requests that spent most time for execution
 var TOP_LIMIT = 1; // the monitor have to collect info when exceeding the number of specified seconds only
+var TOP_SORTBY = 'max_time'; // the collected paths sorting key
 var STATUS_OK = 'OK';
 var STATUS_NOK = 'NOK';
 var STATUS_DOWN = 'DOWN';
@@ -66,15 +66,44 @@ function createMon() {
 		'status' : STATUS_IDLE,
 		// flexible part
 		'info' : {
-			'add' : function(name, data, count) {
+			'add' : function(name, key, value) {
 				if (!this[name]) {
 					this[name] = {};
 				}
-
-				if (this[name][data]) {
-					this[name][data] += count != undefined ? count : 1;
+				if (this[name][key]) {
+					this[name][key] += value != undefined ? value : 1;
 				} else {
-					this[name][data] = count != undefined ? count : 1;
+					this[name][key] = value != undefined ? value : 1;
+				}
+			},
+			//{'path':<value>,'max_time':<value>[,'rate':<value>,'count':<value>]}
+			'addPathNames' : function(path_obj) {
+				if (TOP_MAX <= 0 || (path_obj['max_time'] == 'number' && TOP_LIMIT*1000 > path_obj['max_time'])) {
+					return;
+				}
+				var self = this;
+				if (!self['paths']) {
+					self['paths'] = {};
+				}
+				var obj = self['paths'];
+				var pathname = path_obj['path'];
+				var time = path_obj['max_time'];
+				var rate = path_obj['rate'];
+				var count = path_obj['count'];
+				var hash = utils.hashCode(pathname);
+				if (obj[hash] == undefined) {
+					obj[hash] = {
+						'path' : pathname,
+						'max_time' : time,
+						'rate' : (rate != undefined?rate:time) ,
+						'count' : (count != undefined?count:1)
+					};
+				} else {
+					if (obj[hash]['path'] == pathname) {
+						obj[hash]['count'] += (count != undefined?count:1);
+						obj[hash]['max_time'] = Math.max(obj[hash]['max_time'], time);
+						obj[hash]['rate'] += (rate != undefined?rate:time);
+					}
 				}
 			},
 			'addSorted' : function(name, data, sort_key_value) {
@@ -98,27 +127,29 @@ function createMon() {
 				if (this[name].length > TOP_MAX) {
 					this[name].pop();
 				}
-				// logger.info('addSorted: '+JSON.stringify(this[name]));
-				// logger.info('info: '+JSON.stringify(this));
 			},
 			'addAll' : function(info) {
 				var self = this;
-				var t = "";
+				var _name = "";
 				function isArray(obj) {
 					return obj.constructor == Array;
 				}
 				JSON.stringify(info, function(key, value) {
 					if (typeof (value) == 'object') {
-						if (!isArray(value)) {
-							t = key;
-						} else {
+						if (isArray(value)) {
 							value.forEach(function(element, index, value) {
 								self.addSorted(key, element['data'], element['t'])
 							}, self);
-							return;
+							return undefined;
+						} else {
+							_name = key;
+							if (value['path'] && value['max_time']) {
+								self.addPathNames({'path':value['path'], 'max_time':value['max_time'], 'rate':value['rate'], 'count':value['count']});
+								return undefined;
+							}
 						}
-					} else if (utils.var_type(value) != 'function' && t.length > 0) {
-						self.add(t, key, value);
+					} else if (typeof (value) != 'function' && _name.length > 0) {
+						self.add(_name, key, value);
 					}
 					return value;
 				});
@@ -136,10 +167,11 @@ function createMon() {
  *            {Object}
  * @param options
  *            {Object} the options for given server monitor 
- *            {'collect_all': ('yes' | 'no'), 'top':{'max':<value>, 'limit':<value>}} 
+ *            {'collect_all': ('yes' | 'no'), 'top':{'max':<value>, 'limit':<value>, 'sortby':<value>}} 
  *      where top.max - the maximum number of collected requests that spent most time for execution 
  *            top.limit - the monitor have to collect info when exceeding the number of specified seconds only
- *            default - {'collect_all': 'no', 'top':{'max':3, 'limit':1}}
+ *            sortby - sorting by {max_time | rate | count | load}
+ *            default - {'collect_all': 'no', 'top':{'max':3, 'limit':1, 'sortby': 'max_time'}}
  * @returns {Object} mon_server structure if given server added to the monitor chain 
  * 					null if server is already in monitor
  */
@@ -148,12 +180,18 @@ function addToMonitors(server, options) {
 	if ('object' == typeof options) {
 		logger.info("Registering Monitor: " + JSON.stringify(options));
 		collect_all = (options['collect_all'] && options['collect_all'] == 'yes') ? true : false;
-		if (options['top'] && options['top']['max'] != undefined) {
+		if (options['top'] && options['top']['max'] == 'number') {
 			TOP_MAX = Math.max(TOP_MAX, Math.max(options['top']['max'], 0));
 		}
-		if (options['top'] && options['top']['limit'] != undefined) {
+		if (options['top'] && options['top']['limit'] == 'number') {
 			TOP_LIMIT = Math.max(TOP_LIMIT, Math.max(options['top']['limit'], 0));
 		}
+		if (options['top'] && options['top']['sortby'] == 'string' &&
+			(options['top']['sortby'] == 'max_time' || options['top']['sortby'] == 'rate' || 
+			 options['top']['sortby'] == 'count' || options['top']['sortby'] == 'load')) {
+			TOP_SORTBY = options['top']['sortby'];
+		}
+		
 	}
 
 	if (server && (monitors.length == 0 || !monitors.some(function(element) {return element['server'] == server;}))) {
@@ -204,10 +242,28 @@ function addExceptionToMonitor(server, callback) {
 }
 exports.addExceptionToMonitor = addExceptionToMonitor;
 
-function addResultsToMonitor(server, requests, post_count, get_count, net_duration, pure_duration, total_duration,
-		bytes_read, bytes_written, status_code, info, userInfo, callback) {
+/**
+ * Adds measured values into monitor
+ * @param server	monitored server
+ * @param requests	count of requests
+ * @param post_count count of POST requests
+ * @param get_count	count of GET requests
+ * @param params	object that contains measured results
+ * @param status_code response status code
+ * @param callback	function(error)
+ * @returns	true on succes
+ */
+function addResultsToMonitor(server, requests, post_count, get_count, params, status_code, callback) {
 	var ret = false;
-	if (server && monitors.length > 0) {
+	if (server && monitors.length > 0 && typeof params == 'object') {
+		var pathname = params['pathname'];
+		var net_duration = params['net_duration']; 
+		var pure_duration = params['pure_duration']; 
+		var total_duration = params['total_duration']; 
+		var bytes_read = params['Read'];
+		var bytes_written = params['Written']; 
+		var info = params['info']; 
+		var userInfo = params['user'];
 		for ( var i = 0; i < monitors.length; i++) {
 			var mon_server = monitors[i];
 			if (mon_server['server'] == server) {
@@ -240,11 +296,14 @@ function addResultsToMonitor(server, requests, post_count, get_count, net_durati
 				mon_server['5xx'] += (status_code >= 500 ? 1 : 0);
 				mon_server['timeout'] += (status_code == 408 ? 1 : 0);// DEBUG
 				mon_server['timeE'] = new Date().getTime();
-				if (utils.var_type(info) == 'Object') {
+				if (typeof(info) == 'object') {
 					mon_server['info'].addAll(info);
 				}
-				if (userInfo) {
+				if (typeof(userInfo) == 'object') {
 					mon_server['info'].addSorted('top' + TOP_MAX, userInfo, total_duration);
+				}
+				if (pathname){
+					mon_server['info'].addPathNames({'path':pathname, 'max_time':total_duration});
 				}
 				ret = true;
 				break;
@@ -389,6 +448,14 @@ function monitorResultsToString(mon_server) {
 			+ (mon_server['active'] / time_window * 100).toFixed(2) + ";load:" + (load).toFixed(3);
 	// + ";OFD:"+OFD;
 	if (mon_server['requests'] > 0) {
+		if (mon_server['info']['paths'] && TOP_MAX > 0){
+		var sorted = utils.sortObject(mon_server['info']['paths'], {'byprop':TOP_SORTBY, 'descending': true, 'top': TOP_MAX, 'format': 3 
+            , 'array_option':[{'property':'load', 'action':'divide', 'param1':'count', 'param2':time_window}
+                            , {'property':'rate', 'action':'divide', 'param1':'rate', 'param2':'count'}]});
+   		delete mon_server['info']['paths'];
+   		var new_key = "sorted by \'"+TOP_SORTBY+"\' (top "+TOP_MAX+")";
+   		mon_server['info'][new_key] = sorted;
+		}
 		mon_server['info'].add('platform', "total", mon_server['requests']);
 		mon_server['info'].add("codes", "1xx", mon_server['1xx']);
 		mon_server['info'].add("codes", "2xx", mon_server['2xx']);
@@ -526,6 +593,7 @@ var Monitor = exports.Monitor = function(server, options) {
 
 			var params = {};
 			params['timeS'] = new Date().getTime();//
+			params['pathname'] = url.parse(req.url).pathname.trim().toLowerCase();
 			params['Host'] = /* host + ":" + */port;
 			// params['Scheme'] = "HTTP";
 			params['Method'] = req.method;
@@ -554,6 +622,9 @@ var Monitor = exports.Monitor = function(server, options) {
 			var csocket = req.connection.socket;
 			// listener for response finishing
 			if (req.socket) {
+				
+				req.socket.setMaxListeners(0);
+				
 				req.socket.on('error', function(err) {
 					logger.error("******SOCKET.ERROR****** " + err + " - " + (new Date().getTime() - params['timeS']));
 				})
@@ -585,13 +656,14 @@ var Monitor = exports.Monitor = function(server, options) {
 					}
 					logger.info("***SOCKET.CLOSE: " + JSON.stringify(params));
 					addResultsToMonitor(server, 1, (req.method == "POST" ? 1 : 0), (req.method == "GET" ? 1 : 0),
-							params['net_duration'], params['pure_duration'], params['total_duration'], params['Read'],
-							params['Written'], res.statusCode, params['info'], params['user'], function(error) {
+							params, res.statusCode, function(error) {
 								if (error)
 									logger.error("SOCKET.CLOSE-addResultsToMonitor: error while add");
 							});
 				})
 			} else {
+				res.setMaxListeners(0);
+				
 				res.on('finish', function() {
 					params['timeE'] = new Date().getTime();
 					params['pure_duration'] = (params['timeE'] - (params['net_time'] || params['timeE']));
