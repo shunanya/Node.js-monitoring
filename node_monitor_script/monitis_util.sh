@@ -164,7 +164,7 @@ function json2array(){
 		details=${details//'},'/'} + '}
 		details=${details//'],'/'] + '}
 		details=${details//'"'/''}	
-		details=${details//' '/''}
+		details=${details//' '/'%20'}
 				
 		param="details + $details"	
 		

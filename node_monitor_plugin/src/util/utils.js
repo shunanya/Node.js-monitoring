@@ -372,7 +372,7 @@ function sortObject(obj, option) {
     	arr.forEach(function(v) {
     		if (typeof(v) == 'object'){
     			for(var prop in v){
-    				if (typeof(v[prop]) == 'number'){
+    				if (typeof(v[prop]) == 'number' && (parseInt(v[prop]) != v[prop])){
     					v[prop] = v[prop].toFixed(n);
     				}
     			}

@@ -12,8 +12,9 @@ var logger = Logger.Logger('node_monitor');
 var HOST_LISTEN = "127.0.0.1";
 var PORT_LISTEN = 10010;
 var MAX_VALUE = Number.MAX_VALUE;
-var TOP_MAX = 3; // The maximum number of collected requests that spent most time for execution
-var TOP_LIMIT = 1; // the monitor have to collect info when exceeding the number of specified seconds only
+var TOP_VIEW = 3; // The maximum number of viewable requests that spent most time for execution
+var TOP_LIMIT = 100; // The maximum number of collected requests that spent most time for execution
+var TOP_TIMELIMIT = 1000; // the monitor have to collect info when exceeding the number of specified seconds only
 var TOP_SORTBY = 'max_time'; // the collected paths sorting key
 var STATUS_OK = 'OK';
 var STATUS_NOK = 'NOK';
@@ -28,6 +29,7 @@ function createMon() {
 	var mon = {
 		// options
 		'collect_all' : false,
+		'indexPathNames': 0,
 		// fixed part
 		'server' : null,
 		'listen' : "",
@@ -78,37 +80,44 @@ function createMon() {
 			},
 			//{'path':<value>,'max_time':<value>[,'rate':<value>,'count':<value>]}
 			'addPathNames' : function(path_obj) {
-				if (TOP_MAX <= 0 || (path_obj['max_time'] == 'number' && TOP_LIMIT*1000 > path_obj['max_time'])) {
-					return;
-				}
 				var self = this;
-				if (!self['paths']) {
-					self['paths'] = {};
-				}
-				var obj = self['paths'];
-				var pathname = path_obj['path'];
-				var time = path_obj['max_time'];
-				var rate = path_obj['rate'];
-				var count = path_obj['count'];
-				var hash = utils.hashCode(pathname);
-				if (obj[hash] == undefined) {
-					obj[hash] = {
-						'path' : pathname,
-						'max_time' : time,
-						'rate' : (rate != undefined?rate:time) ,
-						'count' : (count != undefined?count:1)
-					};
-				} else {
-					if (obj[hash]['path'] == pathname) {
-						obj[hash]['count'] += (count != undefined?count:1);
-						obj[hash]['max_time'] = Math.max(obj[hash]['max_time'], time);
-						obj[hash]['rate'] += (rate != undefined?rate:time);
-					}
-				}
+				if (TOP_VIEW <= 0 || TOP_LIMIT <= 0 
+						 || (path_obj['max_time'] == 'number' && TOP_TIMELIMIT > path_obj['max_time'])) {
+							return;
+						}
+						if (!self['paths']) {
+							self['paths'] = {};
+							self.indexPathNames = 0;
+						}
+						var obj = self['paths'];
+						var pathname = path_obj['path'];
+						var time = path_obj['max_time'];
+						var rate = path_obj['rate'];
+						var count = path_obj['count'];
+						var hash = utils.hashCode(pathname);
+						if (obj[hash] == undefined) {// adds a new item
+							if (self.indexPathNames >= TOP_LIMIT){
+								console.warn("Collecting requests: Count of requests exceeds specified limit ("+TOP_LIMIT+")");
+								return;
+							}
+							obj[hash] = {// update existing item
+								'path' : pathname,
+								'max_time' : time,
+								'rate' : (rate != undefined?rate:time) ,
+								'count' : (count != undefined?count:1)
+							};
+							self.indexPathNames++;
+						} else {
+							if (obj[hash]['path'] == pathname) {
+								obj[hash]['count'] += (count != undefined?count:1);
+								obj[hash]['max_time'] = Math.max(obj[hash]['max_time'], time);
+								obj[hash]['rate'] += (rate != undefined?rate:time);
+							}
+						}
 			},
 			'addSorted' : function(name, data, sort_key_value) {
-				var value = sort_key_value / 1000;
-				if (TOP_MAX <= 0 || TOP_LIMIT > value) {
+				var value = sort_key_value;
+				if (TOP_VIEW <= 0 || TOP_TIMELIMIT > value) {
 					return;
 				}
 				if (!this[name]) {
@@ -124,7 +133,7 @@ function createMon() {
 						return b['t'] - a['t'];
 					})
 				}
-				if (this[name].length > TOP_MAX) {
+				if (this[name].length > TOP_VIEW) {
 					this[name].pop();
 				}
 			},
@@ -168,28 +177,35 @@ function createMon() {
  * @param options
  *            {Object} the options for given server monitor 
  *            {'collect_all': ('yes' | 'no'), 'top':{'max':<value>, 'limit':<value>, 'sortby':<value>}} 
- *      where top.max - the maximum number of collected requests that spent most time for execution 
- *            top.limit - the monitor have to collect info when exceeding the number of specified seconds only
- *            sortby - sorting by {max_time | rate | count | load}
- *            default - {'collect_all': 'no', 'top':{'max':3, 'limit':1, 'sortby': 'max_time'}}
+ *      where 
+ *      	  top.view - the number of viewable part of collected requests
+ *      	  top.limit - the maximum number of collected requests that spent most time for execution 
+ *            top.timelimit - the monitor have to collect info when exceeding the number of specified seconds only
+ *            top.sortby - sorting by {max_time | rate | count | load}
+ *            default - {'collect_all': 'no', 'top':{'view':3,'limit':100, 'timelimit':1, 'sortby': 'max_time'}}
  * @returns {Object} mon_server structure if given server added to the monitor chain 
  * 					null if server is already in monitor
  */
 function addToMonitors(server, options) {
 	var collect_all = false;
-	if ('object' == typeof options) {
+	if ('object' == typeof options) {// Parse options
 		logger.info("Registering Monitor: " + JSON.stringify(options));
 		collect_all = (options['collect_all'] && options['collect_all'] == 'yes') ? true : false;
-		if (options['top'] && options['top']['max'] == 'number') {
-			TOP_MAX = Math.max(TOP_MAX, Math.max(options['top']['max'], 0));
-		}
-		if (options['top'] && options['top']['limit'] == 'number') {
-			TOP_LIMIT = Math.max(TOP_LIMIT, Math.max(options['top']['limit'], 0));
-		}
-		if (options['top'] && options['top']['sortby'] == 'string' &&
-			(options['top']['sortby'] == 'max_time' || options['top']['sortby'] == 'rate' || 
-			 options['top']['sortby'] == 'count' || options['top']['sortby'] == 'load')) {
-			TOP_SORTBY = options['top']['sortby'];
+		if (options['top']) {
+			if (options['top']['view'] == 'number') {
+				TOP_VIEW = Math.max(TOP_VIEW, Math.max(options['top']['view'], 0));
+			}
+			if (options['top']['limit'] == 'number') {
+				TOP_LIMIT = Math.max(TOP_LIMIT, Math.max(options['top']['limit'], 0));
+			}
+			if (options['top']['timelimit'] == 'number') {
+				TOP_TIMELIMIT = Math.max(TOP_TIMELIMIT, 1000*Math.max(options['top']['timelimit'], 0));
+			}
+			if (options['top']['sortby'] == 'string' &&
+				(options['top']['sortby'] == 'max_time' || options['top']['sortby'] == 'rate' || 
+				 options['top']['sortby'] == 'count' || options['top']['sortby'] == 'load')) {
+				TOP_SORTBY = options['top']['sortby'];
+			}
 		}
 		
 	}
@@ -300,7 +316,7 @@ function addResultsToMonitor(server, requests, post_count, get_count, params, st
 					mon_server['info'].addAll(info);
 				}
 				if (typeof(userInfo) == 'object') {
-					mon_server['info'].addSorted('top' + TOP_MAX, userInfo, total_duration);
+					mon_server['info'].addSorted('top' + TOP_VIEW, userInfo, total_duration);
 				}
 				if (pathname){
 					mon_server['info'].addPathNames({'path':pathname, 'max_time':total_duration});
@@ -448,12 +464,12 @@ function monitorResultsToString(mon_server) {
 			+ (mon_server['active'] / time_window * 100).toFixed(2) + ";load:" + (load).toFixed(3);
 	// + ";OFD:"+OFD;
 	if (mon_server['requests'] > 0) {
-		if (mon_server['info']['paths'] && TOP_MAX > 0){
-		var sorted = utils.sortObject(mon_server['info']['paths'], {'byprop':TOP_SORTBY, 'descending': true, 'top': TOP_MAX, 'format': 3 
+		if (mon_server['info']['paths'] && TOP_VIEW > 0){
+		var sorted = utils.sortObject(mon_server['info']['paths'], {'byprop':TOP_SORTBY, 'descending': true, 'top': TOP_VIEW, 'format': 3 
             , 'array_option':[{'property':'load', 'action':'divide', 'param1':'count', 'param2':time_window}
                             , {'property':'rate', 'action':'divide', 'param1':'rate', 'param2':'count'}]});
    		delete mon_server['info']['paths'];
-   		var new_key = "sorted by \'"+TOP_SORTBY+"\' (top "+TOP_MAX+")";
+   		var new_key = "sorted by \'"+TOP_SORTBY+"\' (top "+TOP_VIEW+")";
    		mon_server['info'][new_key] = sorted;
 		}
 		mon_server['info'].add('platform', "total", mon_server['requests']);
