@@ -42,6 +42,7 @@ Whole set of measured parameters divided on two parts
 
     1. The status codes (codes) - the collecting status codes shown in form {1xx: value, 2xx: value, 3xx: value, 4xx: value, 5xx: value}  
     1. The application specific parameters (e.g. client platform, client application version and so on).  
+    1. In addition the top requests lists sorted by max response time, count of requests  or other  can be added.   
 
 #### Getting as a Node.js module
 You can get the monitor as NPM module by using the following command  
@@ -56,24 +57,39 @@ You need to add the following two lines in your code
 
         var monitor = require('node-monitor');// insert monitor module-plugin
         ....
-        monitor.Monitor(server);//add server to monitor
+        monitor.Monitor(server, options);//add server to monitor
 
-Beginning this time the monitor will be collecting the measuring data and sending them by HTTP request that should correspond to the following pattern.  
+   where  
+
+        server {Object} representing the server to be monitored
+        options {Object} the options for given server monitor 
+                {'collect_all': ('yes' | 'no'), 'top':{'view':<value>, 'limit':<value>, 'timelimit':<value>, 'sortby':<value>}} 
+                top.view - the number of viewable part of collected requests
+                top.limit - the maximum number of collected requests that spent most time for execution 
+                top.timelimit - the monitor have to collect info when exceeding the number of specified seconds only
+                top.sortby - sorting by {max_time | rate | count | load}
+        default - {'collect_all': 'no', 'top':{'view':3,'limit':100, 'timelimit':1, 'sortby': 'max_time'}}
+
+Note that all items of options parameter are optional and when you don't specify any options the monitor will work by using default values.  
+As soon you register the monitor for your server by calling Monitor method, the monitor will be collecting the measuring data  
+and sending them by HTTP request that should correspond to the following pattern.  
 
         http://127.0.0.1:10010/node_monitor?action=getdata&access_code=<generated code|monitis>
  
     where  
+
         10010 - the listen port of monitor plugin  
         'node_monitor' - the pathname keyword  
         'action-getdata' - command for getting collected data  
         'access_code' - the specially generated access code that is changing for every session  
 
-Please notice that monitor plugin for security reason currently listen localhost only   
+Please note that monitor plugin for security reason currently listen localhost only   
+The such requests are done by bash script part of monitor.  
 
 ##### You should start monitor shell script firstly
-It will periodically ask node server plugin for measured data.  
-If Node server doesn't start yed or down script will send corresponding information to the monitis.  
-As Node server will be available the measure will be grabbing and sending to the monitis.  
+The shell scrip will periodically ask node server plugin for measured data.  
+If Node server doesn't start yet or down, the script will send corresponding information to the monitis (Server DOWN).  
+As Node server will be available, the measurements will be grabbing and sending to the monitis.  
  
 To use existing scripts you will need to do some changes that will correspond your account and data
 
@@ -81,11 +97,11 @@ To use existing scripts you will need to do some changes that will correspond yo
         - replace ApiKey and SecretKey by your keys values (can be obtained from your Monitis account)
          
         in monitor_constant.sh 
-        - replace MONITOR_NAME, MONITOR_TAG and MONITOR_TYPE by your desired names
-        - replace RESULT_PARAMS and ADDITIONAL_PARAMS strings by data formats definition of your monitor
-        - replace MON_SERVER string by your server IP address (it is necessary for title only)
-        - you may do also definition of DURATION between sending results (currently it is declared as 5 mins)
-        - optionally you can also change the node server monitor access url - NODE_MONITOR and other constats (strongly no recommended) 
+        - can replace MONITOR_NAME, MONITOR_TAG and MONITOR_TYPE by your desired names
+        - may replace RESULT_PARAMS and ADDITIONAL_PARAMS strings by data formats definition of your monitor (strongly no recommended)
+        - can replace MON_SERVER string by your server IP address (it is necessary for title only)
+        - you can do also definition of DURATION between sending results (currently it is declared as 5 mins)
+        - optionally you may also change the node server monitor access url - NODE_MONITOR and other constats (strongly no recommended) 
         
 That's all. Now you can controlling the script by the following command  
 
@@ -118,7 +134,7 @@ There are some dependencies for monitor plugin
    - __log4js__ that is used for write information about  every request into log file  
    - __node_hash__ that is used to generation access code  
 
-The shell script use __curl__ package to provide HTTP access to the Monitis server and monitor plugin.  
+The shell script use __cUrl__ package to provide HTTP access to the Monitis server and monitor plugin.  
 
 #### Testing 
 To check the correctness of monitor workability, some Node test-servers are included in the package.  
