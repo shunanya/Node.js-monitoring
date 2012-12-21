@@ -1,6 +1,6 @@
 /*
  * name: node-monitor
- * version: 0.3.2
+ * version: 0.3.3
  * description: Node.js server monitor module
  * repository: git://github.com/shunanya/Node.js-monitoring.git
  * dependencies: 
@@ -224,12 +224,18 @@ function addToMonitors(server, options) {
 
 	if (server && (monitors.length == 0 || !monitors.some(function(element) {return element['server'] == server;}))) {
 		var mon_server = createMon();
-		var host = server.address()['address'] + ":" + server.address()['port'];
 		mon_server['collect_all'] = collect_all;
 		mon_server['server'] = server;
-		mon_server['listen'] = server.address()['port'];// host;
+		var address = server.address();
+		var host = '0.0.0.0';
+		var port = 'n.a';
+		if (address){
+			port = address['port'];
+			host = address['address'];
+			mon_server['listen'] = port;// host;
+		} 
 		monitors.push(mon_server);
-		logger.info("Server " + host + " added to monitors chain with parameters:\n"
+		logger.info("Server " + host +":"+port + " added to monitors chain with parameters:\n"
 				+"{'collect_all': " + collect_all
 				+ ", 'top':{'view':" + TOP_VIEW + ",'limit':" + TOP_LIMIT + ", 'timelimit':" + TOP_TIMELIMIT
 				+ ", 'sortby':'" + TOP_SORTBY + "'}}");
