@@ -1,3 +1,14 @@
+/*
+ * name: node-monitor
+ * version: 0.3.2
+ * description: Node.js server monitor module
+ * repository: git://github.com/shunanya/Node.js-monitoring.git
+ * dependencies: 
+ *   log4js: > 0.4.0
+ *   node_hash: >= 0.2.0
+ * copyright : (c) 20012 Monitis
+ * license : MIT
+ */
 var events = require('events')
 	,sys = require('util')
 	,http = require('http')
