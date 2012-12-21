@@ -1,6 +1,6 @@
 /*
  * name: node-monitor
- * version: 0.3.3
+ * version: 0.3.4
  * description: Node.js server monitor module
  * repository: git://github.com/shunanya/Node.js-monitoring.git
  * dependencies: 
@@ -624,8 +624,8 @@ function getUserInfo(request, collect_all) {
 var Monitor = exports.Monitor = function(server, options) {
 	var mon_server = addToMonitors(server, options);
 	if (mon_server && mon_server != null) {
-		var host = server.address()['address'] || 'localhost';
-		var port = server.address()['port'] || "??";
+//		var host = server.address()['address'] || 'localhost';
+//		var port = server.address()['port'] || "??";
 
 		// listener for requests
 		server.on('request', function(req, res) {
@@ -636,7 +636,7 @@ var Monitor = exports.Monitor = function(server, options) {
 			var params = {};
 			params['timeS'] = new Date().getTime();//
 			params['pathname'] = url.parse(req.url).pathname.trim().toLowerCase();
-			params['Host'] = /* host + ":" + */port;
+//			params['Host'] = /* host + ":" + */port;
 			// params['Scheme'] = "HTTP";
 			params['Method'] = req.method;
 			params["content-length"] = req.headers['content-length'];
