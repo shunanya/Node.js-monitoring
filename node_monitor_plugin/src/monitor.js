@@ -1,6 +1,6 @@
 /*
  * name: node-monitor
- * version: 0.3.4
+ * version: 0.3.5
  * description: Node.js server monitor module
  * repository: git://github.com/shunanya/Node.js-monitoring.git
  * dependencies: 
@@ -232,8 +232,8 @@ function addToMonitors(server, options) {
 		if (address){
 			port = address['port'];
 			host = address['address'];
-			mon_server['listen'] = port;// host;
 		} 
+		mon_server['listen'] = port;
 		monitors.push(mon_server);
 		logger.info("Server " + host +":"+port + " added to monitors chain with parameters:\n"
 				+"{'collect_all': " + collect_all
