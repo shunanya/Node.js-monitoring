@@ -1,6 +1,6 @@
 {
   "name": "node-monitor",
-  "version": "0.3.5",
+  "version": "0.3.7",
   "description": "Node.js server monitor module",
   "main": "./node_monitor_plugin/src/monitor",
   "scripts": {

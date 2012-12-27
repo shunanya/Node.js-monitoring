@@ -635,7 +635,7 @@ var Monitor = exports.Monitor = function(server, options) {
 
 			var params = {};
 			params['timeS'] = new Date().getTime();//
-			params['pathname'] = url.parse(req.url).pathname.trim().toLowerCase();
+			params['pathname'] = utils.cleanURL(url.parse(req.url).pathname).trim().toLowerCase();
 //			params['Host'] = /* host + ":" + */port;
 			// params['Scheme'] = "HTTP";
 			params['Method'] = req.method;

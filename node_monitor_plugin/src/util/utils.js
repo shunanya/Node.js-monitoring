@@ -32,6 +32,19 @@ function clone(obj){
 exports.clone = clone;
 
 /**
+ * Cleans URL path to pure directoriy (very similar to the Unix dirname command)
+ * @param url
+ *            {String} the original url to be cleaning
+ * @returns {String} clean path
+ */
+function cleanURL(url) {
+    return(url.replace(/\?.*$/, "")
+           .replace(/\/[^\/]*\.[^\/]*$/, "")
+           .replace(/\/$/, "") + "/");
+}
+exports.cleanURL = cleanURL;
+
+/**
  * Return the user home directory
  */
 function home_dir(){
