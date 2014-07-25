@@ -1,9 +1,9 @@
 var  http = require('http')
 	,https = require('https')
 	,fs = require('fs')
-//	,monitor = require('node-monitor')
-	,monitor = require('../monitor')
-	,logger = require('../util/logger').Logger('node_server');
+	,monitor = require('node-monitor')
+//	,monitor = require('../monitor')
+	;
 
 var options = {
 		https: {/* HTTPS certificates*/
@@ -24,7 +24,7 @@ var serverS = https.createServer(options.https, function(req, res) {
 	}, 50);
 	
 }).listen(8443);
-logger.info("HTTPS server is created and listen on "+serverS.address()['port']);
+console.log("HTTPS server is created and listen on "+serverS.address()['port']);
 
 monitor.Monitor(serverS);//add server to monitor
 
@@ -40,7 +40,7 @@ var server = http.createServer(function(req, res) {
 	}, 50);
 	
 }).listen(8080);
-logger.info("HTTP server is created and listen on "+server.address()['port']);
+console.log("HTTP server is created and listen on "+server.address()['port']);
 
 
 monitor.Monitor(server);//add server to monitor

@@ -2,9 +2,9 @@
  * Testing with Node.js pure server
  */
 var http = require('http')
-//	,monitor = require('node-monitor')
-	,monitor = require('../monitor')
-	,logger = require('../util/logger').Logger('node_monitor');
+	,monitor = require('node-monitor')
+//	,monitor = require('../monitor')
+	;
 
 var msg = "hello, i know nodejitsu.";
 

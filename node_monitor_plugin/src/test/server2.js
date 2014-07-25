@@ -2,8 +2,7 @@
  * Testing with Express framework
  */
 var express = require('express')
-	,monitor = require('node-monitor')
-	,logger = Logger.Logger('node_queue');
+   ,monitor = require('node-monitor');
 
 var app = express();
 var req_count = 0;
@@ -25,7 +24,7 @@ app.post("/fcgi-bin/agentgateway", function(req, res, next) {
 	
 	 var te = new Date().getTime();
 	 if ((te-t) >= load_dur) {
-		 logger.warn("\n******* average load is "+req_count/(te - t)+" req/s\n");
+		 console.warn("\n******* average load is "+req_count/(te - t)+" req/s\n");
 		 t = te;
 		 req_count = 0;
 	 }
@@ -41,4 +40,4 @@ server.on('listening', function() {
     console.log('Express server started on port %s at %s', server.address().port, server.address().address);
 });
 
-logger.info('Express server started on port %s', 8080);
+console.log('Express server started on port %s', 8080);
