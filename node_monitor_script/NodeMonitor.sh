@@ -10,22 +10,25 @@ then
       status*)
 		cmd=-1	#status
 		echo "Command for status..."
+		shift 1
 		;;
       start*)
 		cmd=0	#start
 		echo "Command for starting..."
+		shift 1
 		;;
       stop*)
 		cmd=1	#stop
 		echo "Command for stopping..."
+		shift 1
 		;;
 	      restart*)
 	cmd=2	#restart
 		echo "Command for restarting"
+		shift 1
 		;;
       *)
     esac
-	
 fi
 
 # starting Node.js monitor
@@ -78,7 +81,7 @@ tmp=`currentscriptpath`
 cd $tmp
 echo switching to ` pwd ` and start - node.js monitor
 
-./nmon_start.sh 1> /dev/null &
+./nmon_start.sh "$@" 1> /dev/null &
 
 sleep 1
 
