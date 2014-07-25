@@ -1,12 +1,13 @@
 /*
  * name: node-monitor
- * version: 0.3.5
+ * version: 0.3.9
  * description: Node.js server monitor module
  * repository: git://github.com/shunanya/Node.js-monitoring.git
  * dependencies: 
- *   log4js: > 0.4.0
- *   node_hash: >= 0.2.0
- * copyright : (c) 20012 Monitis
+ * 	 Node.js: >= 0.10.x
+ *   log4js: >= 0.6.x
+ *   node_hash: >= 0.2.x
+ * copyright : (c) 2012 - 2014 Monitis
  * license : MIT
  */
 var events = require('events')
@@ -14,15 +15,14 @@ var events = require('events')
 	,http = require('http')
 	,url = require('url')
 	,hash = require('node_hash')
-	,utils = require('./util/utils');
+	,utils = require('./util/utils')
+  	,logger = require('./util/logger').Logger('node_monitor');
 
-exports.Logger = Logger = require('./util/logger');
-var logger = Logger.Logger('node_monitor');
 
 // ****** Constants ******
-var HOST_LISTEN = "127.0.0.1";
+var HOST_LISTEN = "0.0.0.0";//listens from anywhere (quite dangerous)
 var PORT_LISTEN = 10010;
-var MAX_VALUE = Number.MAX_VALUE;
+var MAX_VALUE = Number.MAX_VALUE;//for internal purpose
 var TOP_VIEW = 3; // The maximum number of viewable requests that spent most time for execution
 var TOP_LIMIT = 100; // The maximum number of collected requests that spent most time for execution
 var TOP_TIMELIMIT = 1; // the monitor have to collect info when exceeding the number of specified seconds only
@@ -74,8 +74,8 @@ function createMon() {
 		'4xx' : 0,
 		'timeout' : 0,// status code 408
 		'5xx' : 0,
-		'timeS' : new Date().getTime(),
-		'timeE' : new Date().getTime(),
+		'timeS' : Date.now(),
+		'timeE' : Date.now(),
 		'status' : STATUS_IDLE,
 		// flexible part
 		'info' : {
@@ -143,7 +143,7 @@ function createMon() {
 				if (this[name].length > 1) {
 					this[name].sort(function(a, b) {
 						return b['t'] - a['t'];
-					})
+					});
 				}
 				if (this[name].length > TOP_VIEW) {
 					this[name].pop();
@@ -188,8 +188,9 @@ function createMon() {
  *            {Object}
  * @param options
  *            {Object} the options for given server monitor 
- *            {'collect_all': ('yes' | 'no'), 'top':{'max':<value>, 'limit':<value>, 'sortby':<value>}} 
+ *            {'collect_all': ('yes' | 'no'), 'top':{'view':<value>, 'limit':<value>, 'timelimit':<value>, 'sortby':<value>}} 
  *      where 
+ *      	  collect_all - indicates to collecting all possible or standard set of information
  *      	  top.view - the number of viewable part of collected requests
  *      	  top.limit - the maximum number of collected requests that spent most time for execution 
  *            top.timelimit - the monitor have to collect info when exceeding the number of specified seconds only
@@ -332,7 +333,7 @@ function addResultsToMonitor(server, requests, post_count, get_count, params, st
 				mon_server['4xx'] += (status_code >= 400 && status_code < 500 ? 1 : 0);
 				mon_server['5xx'] += (status_code >= 500 ? 1 : 0);
 				mon_server['timeout'] += (status_code == 408 ? 1 : 0);// DEBUG
-				mon_server['timeE'] = new Date().getTime();
+				mon_server['timeE'] = Date.now();
 				if (typeof(info) == 'object') {
 					mon_server['info'].addAll(info);
 				}
@@ -445,7 +446,7 @@ function getMonitorResults(server) {
 		for ( var i = 0; i < monitors.length; i++) {
 			var mon_server = monitors[i];
 			if (mon_server['server'] == server) {
-				logger.debug("getting monitor parameters...");
+//				logger.debug("getting monitor parameters...");
 				ret = monitorResultsToString(mon_server);
 				break;
 			}
@@ -467,7 +468,7 @@ function getMonitorResults(server) {
  * @returns composed string that represents a monitoring data
  */
 function monitorResultsToString(mon_server) {
-	var time_window = ((new Date().getTime()) - mon_server['timeS']) / 1000; // monitoring time window in sec
+	var time_window = ((Date.now()) - mon_server['timeS']) / 1000; // monitoring time window in sec
 	var time_idle = time_window - mon_server['active'];
 	var load = mon_server['requests'] / time_window;
 	ret = "status:" + mon_server['status'] + ";uptime:" + escape(utils.formatTimestamp(process.uptime()))
@@ -634,7 +635,7 @@ var Monitor = exports.Monitor = function(server, options) {
 			// logger.info("\nRequest\n"+sys.inspect(req));
 
 			var params = {};
-			params['timeS'] = new Date().getTime();//
+			params['timeS'] = Date.now();//
 			params['pathname'] = utils.cleanURL(url.parse(req.url).pathname).trim().toLowerCase();
 //			params['Host'] = /* host + ":" + */port;
 			// params['Scheme'] = "HTTP";
@@ -652,13 +653,13 @@ var Monitor = exports.Monitor = function(server, options) {
 			req.on('add_data', function(obj) {
 				// logger.info("********req.on event*********** "+JSON.stringify(obj));
 				params['net_time'] = obj['net_time'] || 0;
-			})
+			});
 
 			req.on('end', function() {
-				var net_time = new Date().getTime();
-				logger.info("********req.on end*********** " + (net_time - params['timeS']));
+				var net_time = Date.now();
+//				logger.info("********req.on end*********** " + (net_time - params['timeS']));
 				params['net_time'] = net_time;
-			})
+			});
 
 			var socket = req.socket;
 			var csocket = req.connection.socket;
@@ -668,10 +669,10 @@ var Monitor = exports.Monitor = function(server, options) {
 				req.socket.setMaxListeners(0);
 				
 				req.socket.on('error', function(err) {
-					logger.error("******SOCKET.ERROR****** " + err + " - " + (new Date().getTime() - params['timeS']));
-				})
+					logger.error("******SOCKET.ERROR****** " + err + " ("+JSON.stringify(params)+") - " + (Date.now() - params['timeS'])/*+err.stack*/);
+				});
 				req.socket.on('close', function() {
-					params['timeE'] = new Date().getTime();
+					params['timeE'] = Date.now();
 					params['pure_duration'] = (params['timeE'] - (params['net_time'] || params['timeE']));
 					params['net_duration'] = ((params['net_time'] || params['timeE']) - params['timeS']);
 					params['total_duration'] = (params['timeE'] - params['timeS']);
@@ -696,18 +697,18 @@ var Monitor = exports.Monitor = function(server, options) {
 					if (params['Written'] == 0) {
 						logger.error("\"Written\":0 " + JSON.stringify(res['_headers']));
 					}
-					logger.info("***SOCKET.CLOSE: " + JSON.stringify(params));
+					logger.debug("***SOCKET.CLOSE: " + JSON.stringify(params));
 					addResultsToMonitor(server, 1, (req.method == "POST" ? 1 : 0), (req.method == "GET" ? 1 : 0),
 							params, res.statusCode, function(error) {
 								if (error)
 									logger.error("SOCKET.CLOSE-addResultsToMonitor: error while add");
 							});
-				})
+				});
 			} else {
 				res.setMaxListeners(0);
 				
 				res.on('finish', function() {
-					params['timeE'] = new Date().getTime();
+					params['timeE'] = Date.now();
 					params['pure_duration'] = (params['timeE'] - (params['net_time'] || params['timeE']));
 					params['net_duration'] = ((params['net_time'] || params['timeE']) - params['timeS']);
 					params['total_duration'] = (params['timeE'] - params['timeS']);
@@ -729,7 +730,7 @@ var Monitor = exports.Monitor = function(server, options) {
 					}
 					params['Uptime'] = process.uptime();// (timeE - time_start) / 1000;// uptime in sec
 
-					logger.info("***RES.FINISH: " + JSON.stringify(params));
+/*					logger.debug("***RES.FINISH: " + JSON.stringify(params));*/
 					addResultsToMonitor(server, 1, (req.method == "POST" ? 1 : 0), (req.method == "GET" ? 1 : 0),
 							params['net_duration'], params['pure_duration'], params['total_duration'], params['Read'],
 							params['Written'], res.statusCode, params['info'], params['user'], function(error) {
@@ -743,19 +744,20 @@ var Monitor = exports.Monitor = function(server, options) {
 		// listener for server closing
 		server.on('close', function(errno) {
 			removeFromMonitor(server);
-		})
+		});
 
 		events.EventEmitter.call(this);
 	}
-}
+};
 
 sys.inherits(Monitor, events.EventEmitter);
 
 function checkAccess(access_code) {
-	var time_min = (new Date().getTime() / 60000).toFixed(0);
-	if (access_code
-			&& (access_code == "monitis" || access_code == hash.md5(time_min.toString())
-			 || access_code == hash.md5((time_min - 1).toString()) || access_code == hash.md5((time_min + 1).toString()))) {
+	var time_min = (Date.now() / 60000).toFixed(0);
+	if (access_code	&& (access_code == "monitis"
+		 || access_code == hash.md5(time_min.toString())
+		 || access_code == hash.md5((time_min - 1).toString()) 
+		 || access_code == hash.md5((time_min + 1).toString()))) {
 		return true;
 	}
 	logger.error("Wrong access: Correct access code is " + hash.md5(time_min.toString()));
@@ -796,8 +798,8 @@ http.createServer(function(req, res) {
 	if (pathname && pathname == "node_monitor" && query && query['action'] && query['access_code']) {
 		var action = query['action'].trim().toLowerCase();
 		var access_code = query['access_code'].trim().toLowerCase();
+		logger.debug("access_code = " + access_code + "\taction = " + action);
 	}
-	logger.debug("access_code = " + access_code + "\taction = " + action);
 	var result = "???";
 	var code = 200;
 	if (checkAccess(access_code)) {
@@ -812,17 +814,16 @@ http.createServer(function(req, res) {
 			result = "wrong command received";
 			code = 400;
 		}
-
 	} else {
 		result = "Access denied."
 		code = 403;
 	}
 	logger.info("SUM: " + result);
-
-	res.writeHead(200, {
+	res.writeHead(code, {
 		'Content-Type' : 'text/plain',
 		'connection' : 'close'
 	});
 	res.write(result);
 	res.end();
 }).listen(PORT_LISTEN, HOST_LISTEN);
+

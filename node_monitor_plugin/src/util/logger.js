@@ -1,41 +1,54 @@
+(function() {
 var path = require('path')
 	,fs = require('fs')
-	,log4js = require('log4js');
+	, log4js = require('log4js')
+	, utils = require('./utils');
 
 /**
- * Searching of properties file beginning from 'start_dir' and continue up to specified 'end_dir'. 
- * At the return the properties object will be loaded if success (otherwise it will be untouched)
+	 * rewrite log4js configuration file by replacing relative paths to absolute
+	 * 
+	 * @param log_file
+	 *            absolute or relative path to the log file
  */
-function search_file(file_path){
-	var end_dir = '/';			//root folder as the end dir of searching
-	var start_dir = __dirname;	//current folder as the start dir of searching
-	
-	var file = undefined;
-	var _file;
-	var cur_path = start_dir; // current folder
-	while (cur_path != end_dir) {
-		_file = path.normalize(path.resolve(cur_path, '..', file_path));
-		if (fs.existsSync(_file)) {
-			file = _file;
-			break;
+	function correcting(log_file) {
+		console.log("Logger: opening log-conf file: " + log_file);
+		var log = fs.readFileSync(log_file, 'utf8');
+		var d = false;
+		var json = JSON.parse(log, function(key, value) {
+			if (key == 'filename') {
+				var dirname = utils.dirname(value);
+				var basename = value.replace(dirname, '');
+				var file = utils.search_file(dirname);
+				file = path.join(file, basename)
+				if (file != value) {
+					value = file;
+					d = true;
+				}
+			}
+			return value;
+		});
+		if (d) {
+			var logFileCorrect = log_file + ".new";
+			console.log("Logger: write corrections to " + logFileCorrect);
+			fs.writeFileSync(logFileCorrect, JSON.stringify(json, null, 2));
+			return logFileCorrect;
 		} else {
-//			console.log("NOT found "+_file);
-			cur_path = path.join(cur_path, '..');
+			console.log("Logger: Config-file - There is nothing to correct!!!");
 		}
-	}
-	return file;
+		return log_file;
 }
 
 //source parameters
 var log_conf ='./properties/log4js.json';//relative path to the properties file (JSON)
-var conf_file = search_file(log_conf);
+	var conf_file = utils.search_file(log_conf);
 if (conf_file){
-	log4js.configure(conf_file, {});
+		log4js.configure(correcting(conf_file), {});
+
 }
 
 var Logger = function(logger_name){
 	var log = log4js.getLogger(logger_name);
-	log.info(">>>>>>>>> Logger for '"+log.category+"' initialized with success. Log Level: "+log.level.toString()+"<<<<<<<<<");
+		log.info(">>>>>>>>> Logger for '" + log.category + "' initialized with success. Log Level: " + log.level + " <<<<<<<<<");
 	return log;
 }
 
@@ -51,4 +64,4 @@ exports.Logger = Logger;
 //    FATAL: new Level(50000, "FATAL", "magenta"),
 //    OFF: new Level(Number.MAX_VALUE, "OFF", "grey")  
 //}
-
+})()

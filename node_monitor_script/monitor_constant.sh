@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Declaration of monitor constants
-declare -r MON_SERVER="174.37.16.80"					# monitored server host
+declare -r MON_SERVER="test"							# monitored server host
 declare -r NODE_MONITOR="http://127.0.0.1:10010/"		# node server monitor access url
 declare    ACCESS_CODE="monitis"						# access code for node monitor
 
@@ -39,3 +39,5 @@ declare -r RESP_DOWN="status:DOWN"
 declare -r ADDITIONAL_PARAMS="details:Details::3"
 
 declare    DURATION=5 						# information sending duration [min] (REPLACE by any desired value)
+
+declare    return_value			# working parameter

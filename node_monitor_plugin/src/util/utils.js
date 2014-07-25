@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2011 Sourcio
+ * Copyright (c) 2014 Monitis
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -9,27 +9,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- * @author Sourcio CJSC
+ * @author Monitis CJSC
  * @license http://www.opensource.org/licenses/mit-license.html MIT License
  */
 var fs = require('fs');
 var path = require('path');
-
-/**
- * Clones any Object (even non-object)
- * @param obj the source object
- * @returns
- */
-function clone(obj){
-    if(obj == null || typeof(obj) != 'object')
-        return obj;    
-//	var temp = JSON.parse(JSON.stringify(obj));
-    var temp = new obj.constructor(); 
-    for(var key in obj)
-        temp[key] = clone(obj[key]);    
-    return temp;
-}
-exports.clone = clone;
 
 /**
  * Cleans URL path to pure directoriy (very similar to the Unix dirname command)
@@ -45,7 +29,7 @@ function cleanURL(url) {
 exports.cleanURL = cleanURL;
 
 /**
- * Return the user home directory
+ * Returns the user home directory
  */
 function home_dir(){
 	return JSON.parse(JSON.stringify(process.env)).HOME;
@@ -53,9 +37,28 @@ function home_dir(){
 exports.home_dir = home_dir;
 
 /**
- * return file or folder info
- * @param file_name {STRING} a name of file or folder
- * @param parameter {STRING} optional parameter (mode, size, blksize, [a|m|c]time, etc.)
+ * Returns parent dirname if parameter represents a path to file.
+ * Otherwise returns the same path.
+ */
+function dirname(value){
+	if (typeof(value) == 'string'){//parameter is string
+		if (value.charAt(value.length - 1) != '/') {//path to file
+			return value.replace(path.basename(value),'');
+		}
+		return value;
+	}
+	return;
+}
+exports.dirname = dirname;
+
+
+/**
+ * returns file or folder info
+ * 
+ * @param file_name
+ *            {STRING} a name of file or folder
+ * @param parameter
+ *            {STRING} optional parameter (mode, size, blksize, [a|m|c]time, etc.)
  */
 function file_info(file_name, parameter){
 	var json = JSON.stringify(fs.statSync(file_name));
@@ -68,7 +71,7 @@ function file_info(file_name, parameter){
 exports.file_info = file_info;
 
 /**
- * return the temporary directory path in the user HOME 
+ * returns the temporary directory path in the user HOME 
  */
 function temp_dir(){
 	var tmp_dir = path.join(JSON.parse(JSON.stringify(process.env)).HOME, "tmp");
@@ -80,19 +83,20 @@ function temp_dir(){
 }
 exports.temp_dir = temp_dir;
 
-//remove file from temporary folder
+//removes file from temporary folder
 exports.temp_remove = function(file_name){
 	try {
 		fs.unlinkSync(path.join(temp_dir(),file_name));
 	} catch(e){/*nothing to do*/}
-}
+};
 
-//write storred result (temporary action - for debug only)
+//write stored result (temporary action - for debug only)
 exports.temp_write = function(file_name, data, type, append){
 	var file_path = path.join(temp_dir(),file_name);
 	file_write(file_path, data, type, append);
-}
+};
 
+//write file asynchronously
 function file_write(file_path, data, type, append){
 	if (type != undefined && type == 'binary') {
 		try {
@@ -101,17 +105,16 @@ function file_write(file_path, data, type, append){
 		var file1 = fs.createWriteStream(file_path, {'flags': 'a'});
 		if (file1){
 			file1.write(data);
-			file1.flush();
 			file1.end();
 		}
 	} else {
 		fs.open(file_path, (append != undefined?"a+":"w+"), function(err, fd){
 			if(err){
-				console.error("Couldn't open "+file_name);
+				console.error("Couldn't open "+file_path+" ("+err+")");
 			} else {
 				fs.write(fd, data, 0, 0, 0, function(err, written){
 					if (err){
-						console.error("Couldn't write to "+file_name);
+						console.error("Couldn't write to "+file_path+" ("+err+")");
 					}
 				});
 				fs.close(fd);
@@ -122,7 +125,39 @@ function file_write(file_path, data, type, append){
 exports.file_write = file_write;
 
 /**
- * convert buffer to hex string
+ * Searching of specified file/dir beginning from 'start_dir' up to 'end_dir'. 
+ * 
+ * At the end of search the full path will returned on success.
+ * The default path (def-file_path) can be specified. it will return on search failed.
+ */
+function search_file(file_path, def_file_path){
+	var end_dir = '/';			//root folder as the end dir of searching
+	var start_dir = __dirname;	//current folder as the start dir of searching
+	var isDir = false
+	if (file_path.charAt(file_path.length -1)=='/'){
+		isDir = true
+	}
+	var file = undefined;
+	var _file;
+	var cur_path = start_dir; // current folder
+	while (cur_path != end_dir) {
+		_file = path.normalize(path.resolve(cur_path, '..', file_path));
+		if (fs.existsSync(_file) && fs.statSync(_file).isDirectory() == isDir) {
+			file = _file;
+//			console.log("FOUND: "+file);
+			break;
+		} else {
+//			console.log("NOT found "+_file);
+			cur_path = path.join(cur_path, '..');
+		}
+	}
+	return file || def_file_path;
+}
+exports.search_file = search_file;
+
+/**
+ * Converts buffer to hex string (lowercase)
+ * 
  * @param buffer [BUFFER] Buffer that contain binary data 
  * @return [STRING] lower case hex string 
  */
@@ -136,13 +171,14 @@ function hexl(buffer) {
 exports.hexl = hexl;
 
 /**
- * convert buffer to hex string
+ * Converts buffer to hex string (upercase)
+ * 
  * @param buffer [BUFFER] Buffer that contain binary data 
  * @return [STRING] upper case hex string 
  */
 exports.hexu = function (buffer) {
     return hexl(buffer).toUpperCase();
-  }
+  };
 
 //---Internally used functions-----
  function pad(b, len) {
@@ -151,14 +187,14 @@ exports.hexu = function (buffer) {
     while (s.length < len) {
       s = "0" + s;
     }
-    return s
+    return s;
   }
   
  function rpad(s, len) {
     while(s.length < len) {
       s += " ";
     }
-    return s
+    return s;
   }
 //-----------------------------------
 
@@ -176,7 +212,7 @@ exports.stringtoHex = function (str){
         r+=h;
     }
     return r;
-}
+};
 
 /**
  * Convert string to hex string
@@ -190,10 +226,11 @@ exports.stringtoHex2 = function (str) {
         console.log("converting after "+i+" itteration = "+hex);
     }
     return hex;
-}
+};
 
 /**
  * Convert string to byte array
+ * 
  * @param str [STRING] string to be converted
  * @param bytesPerSymbol [NUMBER] ???
  * @return [ARRAY] converted string
@@ -212,10 +249,11 @@ exports.str2bytes = function (str, bytesPerSymbol){
 		} 
 	}
 	return arr;
-}
+};
 
 /**
  * Convert byte array to string
+ * 
  * @param arr [ARRAY] byte array to be converted
  * @param bytesPerSymbol [NUMBER] ???
  * @return [STRING] the string representing byte array 
@@ -232,15 +270,16 @@ exports.bytes2str = function (arr, bytesPerSymbol){
 		str+=String.fromCharCode(chCode);
 	}
 	return str;
-}
+};
 
 /* Hexadecimal conversion methods.
  * Copyright (c) 2006 by Ali Farhadi.
  * released under the terms of the Gnu Public License.
  *
- * Website: http://farhadi.ir/
+ * Encodes data to Hex(base16) format
+ * 
+ * @see http://farhadi.ir/
  */
-//Encodes data to Hex(base16) format
 exports.hexEncode = function (data){
 	var b16_digits = '0123456789ABCDEF';
 	var b16_map = new Array();
@@ -254,9 +293,11 @@ exports.hexEncode = function (data){
 	}
 	
 	return result.join('');
-}
+};
 
-//Decodes Hex(base16) formated data
+/**
+ * Decodes Hex(base16) formated data
+ */
 exports.hexDecode = function (data){
 	var b16_digits = '0123456789ABCDEF';
 	var b16_map = new Array();
@@ -441,9 +482,11 @@ exports.var_type = function (o) {
 
 	// We can't determine a more specific type, so return "Object"
 	return "Object";
-}
+};
 
-// Return the name of a function (may be "") or null for nonfunctions
+/**
+ * Return the name of a function (may be "") or null for nonfunctions
+ */ 
 Function.prototype.getName = function() {
 	if ("name" in this) return this.name;
 	return this.name = this.toString().match(/function\s*([^(]*)\(/)[1];
@@ -622,7 +665,7 @@ exports.sprintf = sprintf;
 exports.vsprintf = vsprintf;
 
 /**
- * Format a timestamp into the form 'x days hh:mm:ss'
+ * Format a timestamp into the form 'x-hh:mm:ss'
  * 
  * @param timestamp
  *            the timestamp in sec
@@ -641,3 +684,22 @@ function formatTimestamp(timestamp){
 	return str;
 }
 exports.formatTimestamp = formatTimestamp;
+
+/**
+ * Clones any Object (even non-object)
+ * 
+ * @param obj
+ *            the source object
+ * @returns
+ */
+function clone(obj){
+    if(obj == null || typeof(obj) != 'object')
+        return obj;    
+//	var temp = JSON.parse(JSON.stringify(obj));
+    var temp = new obj.constructor(); 
+    for(var key in obj)
+        temp[key] = clone(obj[key]);    
+    return temp;
+}
+exports.clone = clone;
+
