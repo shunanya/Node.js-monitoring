@@ -1,6 +1,6 @@
 /*
  * name: node-monitor
- * version: 0.3.10
+ * version: 0.3.11
  * description: Node.js server monitor module
  * repository: git://github.com/shunanya/Node.js-monitoring.git
  * dependencies: 
