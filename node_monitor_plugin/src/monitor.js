@@ -49,6 +49,11 @@ function createMon() {
 		'exceptions' : 0,
 		'get_count' : 0,
 		'active' : 0,
+		'head_count' : 0,
+		'put_count' : 0,
+		'delete_count' : 0,
+		'options_count' : 0,
+		'trace_count' : 0,	
 		// Total
 		'time' : 0,
 		'avr_time' : 0,
@@ -286,12 +291,17 @@ exports.addExceptionToMonitor = addExceptionToMonitor;
  * @param requests	count of requests
  * @param post_count count of POST requests
  * @param get_count	count of GET requests
+ * @param head_count	count of HEAD requests
+ * @param put_count	count of PUT requests
+ * @param delete_count	count of DELETE requests
+ * @param options_count	count of OPTIONS requests
+ * @param trace_count	count of TRACE requests
  * @param params	object that contains measured results
  * @param status_code response status code
  * @param callback	function(error)
  * @returns	true on succes
  */
-function addResultsToMonitor(server, requests, post_count, get_count, params, status_code, callback) {
+function addResultsToMonitor(server, requests, post_count, get_count,head_count,put_count,delete_count,options_count,trace_count,params, status_code, callback) {
 	var ret = false;
 	if (server && monitors.length > 0 && typeof params == 'object') {
 		var pathname = params['pathname'];
@@ -325,6 +335,12 @@ function addResultsToMonitor(server, requests, post_count, get_count, params, st
 				mon_server['avr_net_time'] = mon_server['net_time'] / mon_server['requests'];
 				mon_server['post_count'] += post_count;
 				mon_server['get_count'] += get_count;
+				mon_server['head_count'] += head_count;
+				mon_server['put_count'] += put_count;
+				mon_server['delete_count'] += delete_count;
+				mon_server['options_count'] += options_count;
+				mon_server['trace_count'] += trace_count;
+				
 				mon_server['bytes_read'] += bytes_read;
 				mon_server['bytes_written'] += bytes_written;
 				mon_server['1xx'] += (status_code < 200 ? 1 : 0);
@@ -403,6 +419,11 @@ function getMonitorTotalResult(clean) {
 		sum['requests'] += mon['requests'];
 		sum['post_count'] += mon['post_count'];
 		sum['get_count'] += mon['get_count'];
+		sum['head_count'] += mon['head_count'];
+		sum['put_count'] += mon['put_count'];
+		sum['delete_count'] += mon['delete_count'];
+		sum['options_count'] += mon['options_count'];
+		sum['trace_count'] += mon['trace_count'];
 		sum['bytes_read'] += mon['bytes_read'];
 		sum['bytes_written'] += mon['bytes_written'];
 		sum['1xx'] += mon['1xx'];
@@ -509,6 +530,12 @@ function monitorResultsToString(mon_server) {
 		mon_server['info'].add("codes", "408", mon_server['timeout']);
 		mon_server['info'].add("codes", "5xx", mon_server['5xx']);
 		mon_server['info']['post'] = ((mon_server['post_count'] / mon_server['requests'] * 100)).toFixed(1);
+		mon_server['info']['get'] = ((mon_server['get_count'] / mon_server['requests'] * 100)).toFixed(1);
+		mon_server['info']['head'] = ((mon_server['head_count'] / mon_server['requests'] * 100)).toFixed(1);
+		mon_server['info']['put'] = ((mon_server['put_count'] / mon_server['requests'] * 100)).toFixed(1);
+		mon_server['info']['delete'] = ((mon_server['delete_count'] / mon_server['requests'] * 100)).toFixed(1);
+		mon_server['info']['options'] = ((mon_server['options_count'] / mon_server['requests'] * 100)).toFixed(1);
+		mon_server['info']['trace'] = ((mon_server['trace_count'] / mon_server['requests'] * 100)).toFixed(1);
 		mon_server['info']['2xx'] = (100 * mon_server['2xx'] / mon_server['requests']).toFixed(1);
 		mon_server['info']['exc'] = mon_server['exceptions'];
 	}
@@ -698,7 +725,8 @@ var Monitor = exports.Monitor = function(server, options) {
 						logger.error("\"Written\":0 " + JSON.stringify(res['_headers']));
 					}
 					logger.debug("***SOCKET.CLOSE: " + JSON.stringify(params));
-					addResultsToMonitor(server, 1, (req.method == "POST" ? 1 : 0), (req.method == "GET" ? 1 : 0),
+					addResultsToMonitor(server, 1, (req.method == "POST" ? 1 : 0), (req.method == "GET" ? 1 : 0),(req.method == "HEAD" ? 1 : 0),(req.method == "PUT" ? 1 : 0),
+							(req.method == "DELETE" ? 1 : 0), (req.method == "OPTIONS" ? 1 : 0),(req.method == "TRACE" ? 1 : 0),		
 							params, res.statusCode, function(error) {
 								if (error)
 									logger.error("SOCKET.CLOSE-addResultsToMonitor: error while add");
@@ -731,7 +759,8 @@ var Monitor = exports.Monitor = function(server, options) {
 					params['Uptime'] = process.uptime();// (timeE - time_start) / 1000;// uptime in sec
 
 /*					logger.debug("***RES.FINISH: " + JSON.stringify(params));*/
-					addResultsToMonitor(server, 1, (req.method == "POST" ? 1 : 0), (req.method == "GET" ? 1 : 0),
+					addResultsToMonitor(server, 1, (req.method == "POST" ? 1 : 0), (req.method == "GET" ? 1 : 0),(req.method == "HEAD" ? 1 : 0),(req.method == "PUT" ? 1 : 0),
+							(req.method == "DELETE" ? 1 : 0), (req.method == "OPTIONS" ? 1 : 0),(req.method == "TRACE" ? 1 : 0),						
 							params['net_duration'], params['pure_duration'], params['total_duration'], params['Read'],
 							params['Written'], res.statusCode, params['info'], params['user'], function(error) {
 								if (error)

@@ -56,7 +56,7 @@ while true ; do
 			error 1 "$NAME - $MSG ( $ret )"
 			#trying to add new monitor
 			echo $NAME - Adding custom monitor >&2
-			add_custom_monitor "$MONITOR_NAME" "$MONITOR_TAG" "$RESULT_PARAMS" "$ADDITIONAL_PARAMS" "$MONITOR_TYPE"
+			add_custom_monitor "$MONITOR_NAME" "$MONITOR_TAG" "$RESULT_PARAMS" "$ADDITIONAL_PARAMS" "$MONITOR_TYPE" "$MULTIVALUE"
 			ret="$?"
 			if [[ ($ret -ne 0) ]] ; then
 				error "$ret" "$NAME - $MSG"
@@ -96,15 +96,16 @@ while true ; do
 
 	# Periodically adding new data
 	echo "$NAME - Starting LOOP for adding new data" >&2
-	while $(sleep "$DURATION")
-	do
+	while $(sleep "$DURATION") ; do
 		MSG="???"
-		get_token				# get new token in case of the existing one is too old
-		ret="$?"
-		if [[ ($ret -ne 0) ]] ; then	# some problems while getting token...
-			error "$ret" "$NAME - $MSG"
-			continue
-		fi
+		ret=1
+		while [ $ret -ne 0 ] ; do
+			get_token				# get new token in case of the existing one is too old
+			ret="$?"
+			if [[ ($ret -ne 0) ]] ; then	# some problems while getting token...
+				error "$ret" "$NAME - $MSG"
+			fi
+		done
 		get_measure "$DUMMY_CODE"		# call measure function
 		ret="$?"
 		echo $NAME - DEBUG ret = "$ret"  return_value = "$return_value"
@@ -114,10 +115,12 @@ while true ; do
 		fi
 	
 		result=$return_value	# retrieve measure values
+	
 		# Compose monitor data
 		param=$(echo ${result} | awk -F "|" '{print $1}')
 		param=` trim $param `
 		param=` uri_escape $param `
+#		param=` urlencode $param `
 		echo
 		echo $NAME - DEBUG: Composed params is \"$param\"
 		echo
@@ -138,6 +141,7 @@ while true ; do
 	#		continue
 		else
 			echo $( date +"%D %T" ) - $NAME - The Custom monitor data were added \($ret\)
+			continue # don't send additional data separately
 	
 			# Now create additional data
 			if [[ -z "${ADDITIONAL_PARAMS}" ]] ; then # ADDITIONAL_PARAMS is not set
