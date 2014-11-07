@@ -42,10 +42,16 @@ Whole set of measured parameters divided on two parts
 
     1. The status codes (codes) - the collecting status codes shown in form {1xx: value, 2xx: value, 3xx: value, 4xx: value, 5xx: value}  
     1. The application specific parameters (e.g. client platform, client application version and so on).  
-    1. In addition the top requests lists sorted by max response time, count of requests  or other  can be added.   
-
+    1. In addition the top requests lists sorted by max response time, count of requests  or other  can be added.  
+	1. The count of GET requests (get) - the percentage of GET request quantity with respect to the total number of requests during monitoring time.
+	1. The count of HEAD requests (head) - the percentage of HEAD request quantity with respect to the total number of requests during monitoring time.  
+	1. The count of PUT requests (put) - the percentage of PUT request quantity with respect to the total number of requests during monitoring time.  
+	1. The count of DELETE requests (delete) - the percentage of DELETE request quantity with respect to the total number of requests during monitoring time.  
+	1. The count of OPTIONS requests (options) - the percentage of OPTIONS request quantity with respect to the total number of requests during monitoring time.  
+	1. The count of TRACE requests (trace) - the percentage of TRACE request quantity with respect to the total number of requests during monitoring time.
 #### Getting as a Node.js module
 You can get the monitor as NPM module by using the following command  
+(make sure beforehand, that you are in the root folder of your server project)  
 
         npm install node-monitor
 
@@ -83,7 +89,7 @@ and sending them by HTTP request that should correspond to the following pattern
         'action-getdata' - command for getting collected data  
         'access_code' - the specially generated access code that is changing for every session  
 
-Please note that monitor plugin for security reason currently listen localhost only   
+Please note that monitor plugin listens requests from everywhere so, the port 10010 should be open to access from outside.   
 The such requests are done by bash script part of monitor.  
 
 ##### You should start monitor shell script firstly
